@@ -1,4 +1,4 @@
-/* Estrella Racer - Main Controller v5 */
+/* Estrella Racer - Main Controller v7 */
 import { EstrellaGame, drawAvatar, sfx } from "./game.js";
 
 const $ = id => document.getElementById(id);
@@ -9,9 +9,39 @@ let currentDriver = "axel";
 let currentDiff = "medium";
 let animFrame = null;
 
-/* Draw avatars on canvas */
+/* Draw canvas avatars as fallback */
 drawAvatar($("avatarAxel"), "axel");
 drawAvatar($("avatarJade"), "jade");
+
+/* Try loading actual photo - works locally, falls back to drawn avatars on Pages */
+(function tryLoadPhoto(){
+  const candidates = [
+    "./assets/reference/axel-jade/photo.jpg",
+    "./assets/reference/axel-jade/IMG_6923.jpg"
+  ];
+  let loaded = false;
+  candidates.forEach(src => {
+    if(loaded) return;
+    const img = new Image();
+    img.onload = () => {
+      if(loaded) return;
+      loaded = true;
+      const half = img.width / 2;
+      // Jade = left half, Axel = right half
+      [["avatarJade", 0], ["avatarAxel", half]].forEach(([id, sx]) => {
+        const cnv = $(id);
+        const ctx = cnv.getContext("2d");
+        const aspect = cnv.height / cnv.width;
+        const sw = half;
+        const sh = sw * aspect;
+        const sy = Math.max(0, (img.height - sh) / 3);
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, cnv.width, cnv.height);
+      });
+    };
+    img.onerror = () => {};
+    img.src = src + "?t=" + Date.now();
+  });
+})();
 
 /* Menu -> Intro -> Select flow */
 $("playBtn").addEventListener("click", () => {
@@ -165,7 +195,7 @@ function loop(ts=0){
   if(game.state === "playing"){
     game.update(dt);
     updateHUD();
-  } else if(game.state === "intro"){
+  } else if(game.state === "intro" || game.state === "victory"){
     game.update(dt);
   } else {
     game.renderIdle();

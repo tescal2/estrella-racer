@@ -1714,6 +1714,25 @@ export class EstrellaGame {
       this.finishFlag.position.set(0,0,-15);
       this.scene.add(this.finishFlag);
     }
+    // Driver celebration setup: find driver parts, add clapping hands
+    this._victoryDriverParts={head:null,torso:null,hands:[],headBaseY:1.65,torsoBaseY:1.25};
+    if(this.playerCar){
+      this.playerCar.traverse(c=>{
+        if(c.name==="driverHead") this._victoryDriverParts.head=c;
+        if(c.name==="driverTorso") this._victoryDriverParts.torso=c;
+      });
+      // Add clapping hands
+      if(this._victoryDriverParts.head){
+        const skinCol=this._victoryDriverParts.head.material.color.getHex();
+        const handMat=new THREE.MeshPhongMaterial({color:skinCol});
+        const handGeo=new THREE.SphereGeometry(0.09,6,6);
+        const lh=new THREE.Mesh(handGeo,handMat);lh.name="handL";
+        const rh=new THREE.Mesh(handGeo,handMat);rh.name="handR";
+        lh.position.set(-0.3,1.85,0.15);rh.position.set(0.3,1.85,0.15);
+        this.playerCar.add(lh);this.playerCar.add(rh);
+        this._victoryDriverParts.hands=[lh,rh];
+      }
+    }
     // Spawn taco rain 🌮
     this._confetti=[];
     for(let i=0;i<80;i++){
@@ -1743,13 +1762,30 @@ export class EstrellaGame {
   _updateVictory(dt){
     this.victoryTimer+=dt;
     const t=this.victoryTimer;
-    // Car decelerates and pulls up to flag
+    // Car decelerates, turns to face camera, driver celebrates
     if(this.playerCar){
       const targetX=0;
       this.playerCar.position.x+=(targetX-this.playerCar.position.x)*0.03;
       if(t<3){
-        // Car still rolling forward slowly
         this.roadTex.offset.y-=20*dt*0.08*(1-t/3);
+      }
+      // Rotate car 180° to face camera during first 2 seconds
+      if(t<2){
+        const targetRot=Math.PI; // face camera
+        this.playerCar.rotation.y+=(targetRot-this.playerCar.rotation.y)*0.03;
+      }
+      // Driver jumps up and down with clapping
+      const dp=this._victoryDriverParts;
+      if(dp&&dp.head){
+        const jumpHeight=Math.abs(Math.sin(t*4))*0.35;
+        dp.head.position.y=dp.headBaseY+jumpHeight+0.25; // raised + bounce
+        if(dp.torso) dp.torso.position.y=dp.torsoBaseY+jumpHeight+0.2;
+        // Clapping hands come together and apart
+        if(dp.hands.length===2){
+          const clap=Math.sin(t*8)*0.2;
+          dp.hands[0].position.set(-0.08-Math.abs(clap), dp.headBaseY+jumpHeight+0.15, 0.25);
+          dp.hands[1].position.set(0.08+Math.abs(clap), dp.headBaseY+jumpHeight+0.15, 0.25);
+        }
       }
     }
     // Finish line animation

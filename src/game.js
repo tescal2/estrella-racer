@@ -162,25 +162,34 @@ export function drawAvatar(canvas, who){
   hairGrad.addColorStop(0,hairHi);hairGrad.addColorStop(1,hair);
   ctx.fillStyle=hairGrad;
   if(who==="jade"){
-    ctx.beginPath();ctx.ellipse(cx,cy-14,34,28,0,Math.PI,0);ctx.fill();
-    // Long flowing hair
-    ctx.fillRect(cx-34,cy-14,13,55);
-    ctx.fillRect(cx+21,cy-14,13,55);
+    // Voluminous hair with body
+    ctx.beginPath();ctx.ellipse(cx,cy-14,38,32,0,Math.PI,0);ctx.fill();
+    // Side volume - thick flowing hair down past shoulders
+    ctx.beginPath();ctx.ellipse(cx-32,cy+10,16,45,0.1,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(cx+32,cy+10,16,45,-0.1,0,Math.PI*2);ctx.fill();
+    // Hair draping over shoulders
+    ctx.fillRect(cx-38,cy-14,14,70);
+    ctx.fillRect(cx+24,cy-14,14,70);
+    // Inner wave texture
+    ctx.fillStyle=hairHi;
+    ctx.beginPath();ctx.ellipse(cx-30,cy+25,8,20,0.15,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(cx+30,cy+25,8,20,-0.15,0,Math.PI*2);ctx.fill();
     // Hair shine
-    ctx.fillStyle="rgba(255,255,255,0.06)";
+    ctx.fillStyle="rgba(255,255,255,0.08)";
     ctx.fillRect(cx-10,cy-38,8,20);
+    ctx.beginPath();ctx.ellipse(cx+18,cy-20,4,12,0,0,Math.PI*2);ctx.fill();
   } else {
-    // Axel - tall spiky hair standing up
-    ctx.beginPath();ctx.ellipse(cx,cy-18,33,22,0,Math.PI,0);ctx.fill();
-    ctx.fillRect(cx-31,cy-18,7,16);ctx.fillRect(cx+24,cy-18,7,16);
-    // Tall spiky tufts on top
-    for(let i=-2;i<=2;i++){
-      ctx.beginPath();
-      ctx.moveTo(cx+i*8-5,cy-38);ctx.lineTo(cx+i*8,cy-52-Math.abs(i)*3);ctx.lineTo(cx+i*8+5,cy-38);
-      ctx.closePath();ctx.fill();
-    }
-    ctx.fillStyle="rgba(255,255,255,0.06)";
-    ctx.fillRect(cx-8,cy-46,6,14);
+    // Axel - poofy full hair on top
+    ctx.beginPath();ctx.ellipse(cx,cy-20,35,28,0,Math.PI,0);ctx.fill();
+    // Poofy volume on top - rounded, thick
+    ctx.beginPath();ctx.ellipse(cx,cy-32,30,18,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(cx-8,cy-36,18,12,0.2,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(cx+8,cy-36,18,12,-0.2,0,Math.PI*2);ctx.fill();
+    // Sides
+    ctx.fillRect(cx-33,cy-20,7,18);ctx.fillRect(cx+26,cy-20,7,18);
+    // Shine highlight
+    ctx.fillStyle="rgba(255,255,255,0.07)";
+    ctx.beginPath();ctx.ellipse(cx-6,cy-38,8,10,0,0,Math.PI*2);ctx.fill();
   }
   // Eyebrows
   ctx.strokeStyle=hair;ctx.lineWidth=2.8;
@@ -335,20 +344,24 @@ function buildCar(color, isPlayer, driverName){
       // Hair
       const dHairMat = new THREE.MeshPhongMaterial({color:hairCol});
       if(isJade){
-        // Long hair
-        const dHair = new THREE.Mesh(new THREE.SphereGeometry(0.24,8,8), dHairMat);
-        dHair.position.set(0, 1.7, -0.2); g.add(dHair);
-        const dHairFlow = new THREE.Mesh(new THREE.BoxGeometry(0.4,0.35,0.12), dHairMat);
-        dHairFlow.position.set(0, 1.4, -0.25); g.add(dHairFlow);
+        // Voluminous long hair
+        const dHairTop = new THREE.Mesh(new THREE.SphereGeometry(0.28,8,8), dHairMat);
+        dHairTop.position.set(0, 1.72, -0.18); g.add(dHairTop);
+        // Side volume - hair flowing down past shoulders
+        [-0.22, 0.22].forEach(x=>{
+          const side = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.08,0.6,6), dHairMat);
+          side.position.set(x, 1.35, -0.2); g.add(side);
+        });
+        // Hair draping behind
+        const dHairBack = new THREE.Mesh(new THREE.BoxGeometry(0.45,0.5,0.14), dHairMat);
+        dHairBack.position.set(0, 1.4, -0.28); g.add(dHairBack);
       } else {
-        // Tall spiky hair standing up
-        const dHairBase = new THREE.Mesh(new THREE.SphereGeometry(0.23,8,8), dHairMat);
-        dHairBase.position.set(0, 1.72, -0.15); dHairBase.scale.y=0.7; g.add(dHairBase);
-        // Spiky tufts on top
-        for(let i=-1;i<=1;i++){
-          const spike = new THREE.Mesh(new THREE.ConeGeometry(0.06,0.25,4), dHairMat);
-          spike.position.set(i*0.1, 1.92, -0.12); g.add(spike);
-        }
+        // Poofy full hair on top
+        const dHairBase = new THREE.Mesh(new THREE.SphereGeometry(0.26,8,8), dHairMat);
+        dHairBase.position.set(0, 1.75, -0.13); g.add(dHairBase);
+        // Extra poof volume
+        const dHairPoof = new THREE.Mesh(new THREE.SphereGeometry(0.2,8,8), dHairMat);
+        dHairPoof.position.set(0, 1.88, -0.1); g.add(dHairPoof);
       }
       // Eyes
       const eyeW = new THREE.MeshPhongMaterial({color:0xffffff});
@@ -996,10 +1009,16 @@ function buildSilhouetteSprite(who){
   const cx=128, cy=100;
   ctx.beginPath();ctx.ellipse(cx,cy,42,52,0,0,Math.PI*2);ctx.fill();
   if(who==="jade"){
-    ctx.beginPath();ctx.ellipse(cx,cy-16,46,38,0,Math.PI,0);ctx.fill();
-    ctx.fillRect(cx-46,cy-16,16,70);ctx.fillRect(cx+30,cy-16,16,70);
+    // Voluminous hair
+    ctx.beginPath();ctx.ellipse(cx,cy-16,50,40,0,Math.PI,0);ctx.fill();
+    // Flowing hair down past shoulders
+    ctx.beginPath();ctx.ellipse(cx-44,cy+10,18,50,0.1,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(cx+44,cy+10,18,50,-0.1,0,Math.PI*2);ctx.fill();
+    ctx.fillRect(cx-48,cy-16,16,75);ctx.fillRect(cx+32,cy-16,16,75);
   } else {
+    // Poofy rounded hair
     ctx.beginPath();ctx.ellipse(cx,cy-22,44,28,0,Math.PI,0);ctx.fill();
+    ctx.beginPath();ctx.ellipse(cx,cy-34,36,20,0,0,Math.PI*2);ctx.fill();
   }
   ctx.beginPath();
   ctx.moveTo(cx-50,384);ctx.quadraticCurveTo(cx-50,cy+52,cx-12,cy+52);
@@ -1085,7 +1104,7 @@ export class EstrellaGame {
     this.scene.add(this.stars);
     // Ground
     const gndGeo = new THREE.PlaneGeometry(200, ROAD_LEN+ROAD_BEHIND);
-    const gndMat = new THREE.MeshPhongMaterial({color:0x2d5a27});
+    const gndMat = new THREE.MeshPhongMaterial({color:0x3a3a3a});
     this.ground = new THREE.Mesh(gndGeo, gndMat);
     this.ground.rotation.x=-Math.PI/2;
     this.ground.position.set(0,-0.01, -(ROAD_LEN-ROAD_BEHIND)/2);

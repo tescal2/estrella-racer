@@ -1079,46 +1079,25 @@ function makeRoadTexture(){
 }
 
 /* Silhouette sprite - large and glowing */
-function buildSilhouetteSprite(who){
-  const cnv=document.createElement("canvas");cnv.width=256;cnv.height=384;
+function buildSkyMessage(who){
+  const cnv=document.createElement("canvas");cnv.width=512;cnv.height=128;
   const ctx=cnv.getContext("2d");
-  // Glowing aura
-  const glow=ctx.createRadialGradient(128,140,30,128,140,150);
-  glow.addColorStop(0,who==="jade"?"rgba(233,30,99,0.25)":"rgba(21,101,192,0.25)");
-  glow.addColorStop(1,"rgba(0,0,0,0)");
-  ctx.fillStyle=glow;ctx.fillRect(0,0,256,384);
-  // Silhouette figure
-  ctx.fillStyle=who==="jade"?"rgba(233,30,99,0.18)":"rgba(21,101,192,0.18)";
-  const cx=128, cy=100;
-  ctx.beginPath();ctx.ellipse(cx,cy,42,52,0,0,Math.PI*2);ctx.fill();
-  if(who==="jade"){
-    // Voluminous hair
-    ctx.beginPath();ctx.ellipse(cx,cy-16,50,40,0,Math.PI,0);ctx.fill();
-    // Flowing hair down past shoulders
-    ctx.beginPath();ctx.ellipse(cx-44,cy+10,18,50,0.1,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.ellipse(cx+44,cy+10,18,50,-0.1,0,Math.PI*2);ctx.fill();
-    ctx.fillRect(cx-48,cy-16,16,75);ctx.fillRect(cx+32,cy-16,16,75);
-  } else {
-    // Poofy rounded hair
-    ctx.beginPath();ctx.ellipse(cx,cy-22,44,28,0,Math.PI,0);ctx.fill();
-    ctx.beginPath();ctx.ellipse(cx,cy-34,36,20,0,0,Math.PI*2);ctx.fill();
-  }
-  ctx.beginPath();
-  ctx.moveTo(cx-50,384);ctx.quadraticCurveTo(cx-50,cy+52,cx-12,cy+52);
-  ctx.lineTo(cx+12,cy+52);ctx.quadraticCurveTo(cx+50,cy+52,cx+50,384);
-  ctx.closePath();ctx.fill();
-  // Driver name glowing below silhouette
-  const name=who==="jade"?"JADE":"AXEL";
-  ctx.font="bold 36px sans-serif";ctx.textAlign="center";
-  ctx.fillStyle=who==="jade"?"rgba(233,30,99,0.5)":"rgba(21,101,192,0.5)";
-  ctx.shadowColor=who==="jade"?"#e91e63":"#1565c0";
-  ctx.shadowBlur=15;
-  ctx.fillText(name,128,280);
+  const name=who==="jade"?"Jade":"Axel";
+  const color=who==="jade"?"#e91e63":"#1565c0";
+  // Glowing text
+  ctx.shadowColor=color;
+  ctx.shadowBlur=20;
+  ctx.fillStyle=color;
+  ctx.font="bold 64px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";
+  ctx.fillText("Go "+name+" Go!",256,64);
+  // Second pass for brightness
+  ctx.shadowBlur=10;
+  ctx.fillText("Go "+name+" Go!",256,64);
   ctx.shadowBlur=0;
   const tex=new THREE.CanvasTexture(cnv);
-  const mat=new THREE.SpriteMaterial({map:tex,transparent:true});
+  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,opacity:0.7});
   const spr=new THREE.Sprite(mat);
-  spr.scale.set(20,30,1);
+  spr.scale.set(25,6,1);
   return spr;
 }
 
@@ -1393,8 +1372,8 @@ export class EstrellaGame {
     for(let z=-20;z>-200;z-=30) this._spawnScenery(z);
     // Silhouette
     if(this.silhouette)this.scene.remove(this.silhouette);
-    this.silhouette=buildSilhouetteSprite(driver);
-    this.silhouette.position.set(18,55,-180);
+    this.silhouette=buildSkyMessage(driver);
+    this.silhouette.position.set(0,45,-150);
     this.scene.add(this.silhouette);
     // Finish flag (hidden, placed at end)
     if(this.finishFlag)this.scene.remove(this.finishFlag);
@@ -1509,7 +1488,7 @@ export class EstrellaGame {
     }
     this.camera.position.x+=(this.playerCar.position.x*0.3-this.camera.position.x)*0.05;
     this.camera.position.y=6+this.jumpY*0.4;
-    if(this.silhouette)this.silhouette.position.y=55+Math.sin(Date.now()*0.001)*3;
+    if(this.silhouette)this.silhouette.position.y=45+Math.sin(Date.now()*0.001)*3;
     // Approaching finish?
     if(this.dist>=this.goalDist*0.9&&!this.finishFlag){
       this.finishFlag=buildFinishFlag();
@@ -1561,7 +1540,7 @@ export class EstrellaGame {
     else if(this.playerCar)this.playerCar.visible=true;
     sfx.engine(effectiveSpeed);
     this.camera.position.x+=(this.playerCar.position.x*0.3-this.camera.position.x)*0.05;
-    if(this.silhouette)this.silhouette.position.y=55+Math.sin(Date.now()*0.001)*3;
+    if(this.silhouette)this.silhouette.position.y=45+Math.sin(Date.now()*0.001)*3;
     this.skyline.willis.traverse(c=>{if(c.name==="blink")c.material.emissiveIntensity=.5+.5*Math.sin(Date.now()*.003);});
     this.renderer.render(this.scene,this.camera);
   }
@@ -1634,7 +1613,7 @@ export class EstrellaGame {
     this.camera.lookAt(0,2,0);
     // Silhouette celebration glow
     if(this.silhouette){
-      this.silhouette.position.y=55+Math.sin(t*2)*5;
+      this.silhouette.position.y=45+Math.sin(t*2)*5;
       this.silhouette.material.opacity=0.5+Math.sin(t*3)*0.3;
     }
     this.skyline.willis.traverse(c=>{if(c.name==="blink")c.material.emissiveIntensity=.5+.5*Math.sin(t*4);});

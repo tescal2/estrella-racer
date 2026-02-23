@@ -740,14 +740,14 @@ function buildRestaurant(){
   const aw = new THREE.Mesh(new THREE.BoxGeometry(6.5,0.15,1.5),
     new THREE.MeshPhongMaterial({color:0xd32f2f}));
   aw.position.set(0,3.2,2.5); aw.rotation.x=0.15; g.add(aw);
-  // Sign "TACOS"
-  const sc=document.createElement("canvas");sc.width=128;sc.height=32;
+  // Sign "ZACATACOS"
+  const sc=document.createElement("canvas");sc.width=256;sc.height=48;
   const sx=sc.getContext("2d");
-  sx.fillStyle="#ffeb3b";sx.fillRect(0,0,128,32);
-  sx.fillStyle="#d32f2f";sx.font="bold 18px sans-serif";sx.textAlign="center";
-  sx.fillText("ZACATACOS",64,24);
+  sx.fillStyle="#ffeb3b";sx.fillRect(0,0,256,48);
+  sx.fillStyle="#d32f2f";sx.font="bold 32px sans-serif";sx.textAlign="center";
+  sx.fillText("ZACATACOS",128,36);
   const signTex=new THREE.CanvasTexture(sc);
-  const sign=new THREE.Mesh(new THREE.PlaneGeometry(2.5,0.6),new THREE.MeshBasicMaterial({map:signTex}));
+  const sign=new THREE.Mesh(new THREE.PlaneGeometry(4,0.9),new THREE.MeshBasicMaterial({map:signTex}));
   sign.position.set(0,4.3,2.01); g.add(sign);
   // Door
   const door = new THREE.Mesh(new THREE.PlaneGeometry(1,2),new THREE.MeshPhongMaterial({color:0x5d4037}));
@@ -832,13 +832,13 @@ function buildBirrieria(){
     new THREE.MeshPhongMaterial({color:0x2e7d32}));
   aw.position.set(0,3.2,2.5); aw.rotation.x=0.15; g.add(aw);
   // Sign
-  const sc=document.createElement("canvas");sc.width=200;sc.height=32;
+  const sc=document.createElement("canvas");sc.width=320;sc.height=48;
   const sx=sc.getContext("2d");
-  sx.fillStyle="#fff3e0";sx.fillRect(0,0,200,32);
-  sx.fillStyle="#1b5e20";sx.font="bold 14px sans-serif";sx.textAlign="center";
-  sx.fillText("Birrieria Zaragoza",100,24);
+  sx.fillStyle="#fff3e0";sx.fillRect(0,0,320,48);
+  sx.fillStyle="#1b5e20";sx.font="bold 24px sans-serif";sx.textAlign="center";
+  sx.fillText("Birrieria Zaragoza",160,34);
   const signTex=new THREE.CanvasTexture(sc);
-  const sign=new THREE.Mesh(new THREE.PlaneGeometry(3.2,0.6),new THREE.MeshBasicMaterial({map:signTex}));
+  const sign=new THREE.Mesh(new THREE.PlaneGeometry(4.5,0.9),new THREE.MeshBasicMaterial({map:signTex}));
   sign.position.set(0,4.3,2.01); g.add(sign);
   // Door
   const door = new THREE.Mesh(new THREE.PlaneGeometry(1,2),new THREE.MeshPhongMaterial({color:0x3e2723}));
@@ -1021,6 +1021,30 @@ function buildDancers(){
 
 const STREET_NAMES=["Pulaski","Cicero","Ashland","Belmont","Division"];
 let _streetIdx=0;
+function buildConcreteBuilding(){
+  const g = new THREE.Group();
+  const h=4+Math.random()*8; // varying heights 4-12
+  const w=3+Math.random()*4;
+  const colors=[0x9e9e9e,0x78909c,0x90a4ae,0x8d8d8d,0xbdbdbd];
+  const col=colors[Math.floor(Math.random()*colors.length)];
+  const bm=new THREE.MeshPhongMaterial({color:col});
+  const bldg=new THREE.Mesh(new THREE.BoxGeometry(w,h,4),bm);
+  bldg.position.y=h/2; g.add(bldg);
+  // Windows grid
+  const wm=new THREE.MeshPhongMaterial({color:0xbbdefb,emissive:0x90caf9,emissiveIntensity:0.2,transparent:true,opacity:0.5});
+  for(let y=1.5;y<h-0.5;y+=1.5){
+    for(let x=-w/2+0.8;x<w/2-0.3;x+=1.2){
+      const win=new THREE.Mesh(new THREE.PlaneGeometry(0.6,0.8),wm);
+      win.position.set(x,y,2.01); g.add(win);
+    }
+  }
+  // Roof edge
+  const roof=new THREE.Mesh(new THREE.BoxGeometry(w+0.3,0.15,4.3),
+    new THREE.MeshPhongMaterial({color:0x757575}));
+  roof.position.y=h+0.07; g.add(roof);
+  g.userData.type="building"; return g;
+}
+
 function buildStreetSign(){
   const g = new THREE.Group();
   // Pole
@@ -1136,24 +1160,33 @@ function makeRoadTexture(){
 
 /* Silhouette sprite - large and glowing */
 function buildSkyMessage(who){
-  const cnv=document.createElement("canvas");cnv.width=512;cnv.height=128;
+  const cnv=document.createElement("canvas");cnv.width=1024;cnv.height=256;
   const ctx=cnv.getContext("2d");
   const name=who==="jade"?"Jade":"Axel";
   const color=who==="jade"?"#e91e63":"#1565c0";
-  // Glowing text
+  const lightColor=who==="jade"?"#f48fb1":"#64b5f6";
+  // Outer glow
   ctx.shadowColor=color;
-  ctx.shadowBlur=20;
+  ctx.shadowBlur=40;
   ctx.fillStyle=color;
-  ctx.font="bold 64px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";
-  ctx.fillText("Go "+name+" Go!",256,64);
-  // Second pass for brightness
-  ctx.shadowBlur=10;
-  ctx.fillText("Go "+name+" Go!",256,64);
+  ctx.font="bold 120px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";
+  ctx.fillText("Go "+name+" Go!",512,128);
+  // Second pass brighter
+  ctx.shadowBlur=20;
+  ctx.fillText("Go "+name+" Go!",512,128);
   ctx.shadowBlur=0;
+  // Glossy shine overlay - gradient from top
+  const gloss=ctx.createLinearGradient(0,60,0,180);
+  gloss.addColorStop(0,"rgba(255,255,255,0.35)");
+  gloss.addColorStop(0.45,"rgba(255,255,255,0.1)");
+  gloss.addColorStop(0.55,"rgba(255,255,255,0)");
+  gloss.addColorStop(1,"rgba(255,255,255,0)");
+  ctx.fillStyle=gloss;
+  ctx.fillText("Go "+name+" Go!",512,128);
   const tex=new THREE.CanvasTexture(cnv);
-  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,opacity:0.7});
+  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,opacity:0.85});
   const spr=new THREE.Sprite(mat);
-  spr.scale.set(25,6,1);
+  spr.scale.set(40,10,1);
   return spr;
 }
 
@@ -1311,7 +1344,8 @@ export class EstrellaGame {
 
   _spawnScenery(z){
     const builders=[buildRestaurant, buildBirrieria, buildFleaMarket, buildPark,
-      buildPaletero, buildFishSeller, buildTamaleStand, buildDancers];
+      buildPaletero, buildFishSeller, buildTamaleStand, buildDancers,
+      buildConcreteBuilding, buildConcreteBuilding, buildConcreteBuilding];
     this._sceneryCount = (this._sceneryCount||0)+1;
     const makeOne=(side)=>{
       const b=builders[Math.floor(Math.random()*builders.length)]();
@@ -1574,14 +1608,15 @@ export class EstrellaGame {
     this.camera.position.x+=(this.playerCar.position.x*0.3-this.camera.position.x)*0.05;
     this.camera.position.y=6+this.jumpY*0.4;
     if(this.silhouette)this.silhouette.position.y=45+Math.sin(Date.now()*0.001)*3;
-    // Approaching finish?
-    if(this.dist>=this.goalDist*0.9&&!this.finishFlag){
+    // Finish line at 98%
+    if(this.dist>=this.goalDist*0.98&&!this.finishFlag){
       this.finishFlag=buildFinishFlag();
       this.finishFlag.position.set(0,0,-80);
       this.scene.add(this.finishFlag);
     }
     if(this.finishFlag)this.finishFlag.position.z+=effectiveSpeed*dt;
-    if(this.dist>=this.goalDist){this._startVictory();return;}
+    // Victory when car crosses finish line
+    if(this.finishFlag&&this.finishFlag.position.z>=0){this._startVictory();return;}
     this.skyline.willis.traverse(c=>{if(c.name==="blink")c.material.emissiveIntensity=.5+.5*Math.sin(Date.now()*.003);});
     this.renderer.render(this.scene,this.camera);
   }

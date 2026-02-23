@@ -81,7 +81,7 @@ class SoundFX {
     if(this.muted||!this.ctx) return;
     if(!this._engOsc){
       this._engOsc=this.ctx.createOscillator();this._engGain=this.ctx.createGain();
-      this._engOsc.type="sawtooth";this._engGain.gain.value=.04;
+      this._engOsc.type="sawtooth";this._engGain.gain.value=.015;
       this._engOsc.connect(this._engGain);this._engGain.connect(this.ctx.destination);this._engOsc.start();
     }
     this._engOsc.frequency.value=60+speed*2;
@@ -1470,7 +1470,7 @@ export class EstrellaGame {
       if(this.invincible<=0&&!this.airborne){
         const dx=Math.abs(o.position.x-this.playerCar.position.x);
         const dz=Math.abs(o.position.z-this.playerCar.position.z);
-        if(dx<1.8&&dz<CAR_LEN){this._crash();break;}
+        if(dx<1.8&&dz<CAR_LEN){this._crash();return;}
       }
     }
     // Update pickups

@@ -195,7 +195,7 @@ function loop(ts=0){
   if(game.state === "playing"){
     game.update(dt);
     updateHUD();
-  } else if(game.state === "intro" || game.state === "victory"){
+  } else if(game.state === "intro" || game.state === "victory" || game.state === "crashing"){
     game.update(dt);
   } else {
     game.renderIdle();

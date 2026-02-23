@@ -103,6 +103,17 @@ class SoundFX {
     };play();
   }
   stopMusic(){this._musicPlaying=false;clearTimeout(this._musicTimer);}
+  towHorn(){
+    this._play(c=>{
+      const t=c.currentTime;
+      [150,120].forEach((f,i)=>{
+        const o=c.createOscillator(),g=c.createGain();
+        o.type="sawtooth";o.frequency.value=f;
+        g.gain.setValueAtTime(.15,t+i*.35);g.gain.exponentialRampToValueAtTime(.01,t+i*.35+.3);
+        o.connect(g);g.connect(c.destination);o.start(t+i*.35);o.stop(t+i*.35+.35);
+      });
+    });
+  }
 }
 export const sfx = new SoundFX();
 /* Avatar drawing - detailed */
@@ -318,9 +329,9 @@ function buildGasCan(){
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.35), bm);
   body.position.y=0.5; g.add(body);
   const hm = new THREE.MeshPhongMaterial({color:0x333333});
-  g.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.4,0.08,0.08),hm),{position:new THREE.Vector3(0,0.95,0)}));
-  g.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.08,0.2,0.08),hm),{position:new THREE.Vector3(-0.16,0.85,0)}));
-  g.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(0.08,0.2,0.08),hm),{position:new THREE.Vector3(0.16,0.85,0)}));
+  const h1=new THREE.Mesh(new THREE.BoxGeometry(0.4,0.08,0.08),hm);h1.position.set(0,0.95,0);g.add(h1);
+  const h2=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.2,0.08),hm);h2.position.set(-0.16,0.85,0);g.add(h2);
+  const h3=new THREE.Mesh(new THREE.BoxGeometry(0.08,0.2,0.08),hm);h3.position.set(0.16,0.85,0);g.add(h3);
   const nz = new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.06,0.25,6),hm);
   nz.position.set(0.25,0.95,0);nz.rotation.z=-0.5;g.add(nz);
   const lb = new THREE.Mesh(new THREE.PlaneGeometry(0.35,0.25),new THREE.MeshPhongMaterial({color:0xffeb3b}));
@@ -345,12 +356,43 @@ function buildStarPickup(){
 }
 
 /* Loco objects */
-function buildTree(){const g=new THREE.Group();g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(.2,.3,2,8),new THREE.MeshPhongMaterial({color:0x5d4037})),{position:new THREE.Vector3(0,1,0)}));g.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(1.2,8,8),new THREE.MeshPhongMaterial({color:0x2e7d32})),{position:new THREE.Vector3(0,2.5,0)}));g.userData.type="tree";return g;}
-function buildHydrant(){const g=new THREE.Group();g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(.25,.3,.8,8),new THREE.MeshPhongMaterial({color:0xd32f2f})),{position:new THREE.Vector3(0,.4,0)}));g.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(.28,8,8),new THREE.MeshPhongMaterial({color:0xb71c1c})),{position:new THREE.Vector3(0,.85,0)}));g.userData.type="hydrant";return g;}
-function buildTrashcan(){const g=new THREE.Group();g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(.35,.3,.9,8),new THREE.MeshPhongMaterial({color:0x616161})),{position:new THREE.Vector3(0,.45,0)}));g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(.38,.38,.06,8),new THREE.MeshPhongMaterial({color:0x757575})),{position:new THREE.Vector3(0,.93,0)}));g.userData.type="trashcan";return g;}
-function buildCone(){const g=new THREE.Group();g.add(Object.assign(new THREE.Mesh(new THREE.ConeGeometry(.25,.7,8),new THREE.MeshPhongMaterial({color:0xff6f00})),{position:new THREE.Vector3(0,.35,0)}));g.userData.type="cone";return g;}
-function buildBarrel(){const g=new THREE.Group();g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(.4,.4,.8,10),new THREE.MeshPhongMaterial({color:0x4e342e})),{position:new THREE.Vector3(0,.4,0)}));g.userData.type="barrel";return g;}
-function buildChicken(){const g=new THREE.Group();const b=new THREE.Mesh(new THREE.SphereGeometry(.35,8,8),new THREE.MeshPhongMaterial({color:0xfff9c4}));b.position.y=.5;b.scale.set(1,.9,1.2);g.add(b);g.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(.18,8,8),new THREE.MeshPhongMaterial({color:0xfff9c4})),{position:new THREE.Vector3(0,.9,.25)}));const bk=new THREE.Mesh(new THREE.ConeGeometry(.06,.15,6),new THREE.MeshPhongMaterial({color:0xff8f00}));bk.position.set(0,.88,.45);bk.rotation.x=-Math.PI/2;g.add(bk);g.add(Object.assign(new THREE.Mesh(new THREE.SphereGeometry(.08,6,6),new THREE.MeshPhongMaterial({color:0xd32f2f})),{position:new THREE.Vector3(0,1.08,.2)}));g.userData.type="chicken";return g;}
+function buildTree(){
+  const g=new THREE.Group();
+  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(.2,.3,2,8),new THREE.MeshPhongMaterial({color:0x5d4037}));
+  trunk.position.set(0,1,0);g.add(trunk);
+  const foliage=new THREE.Mesh(new THREE.SphereGeometry(1.2,8,8),new THREE.MeshPhongMaterial({color:0x2e7d32}));
+  foliage.position.set(0,2.5,0);g.add(foliage);
+  g.userData.type="tree";return g;
+}
+function buildHydrant(){
+  const g=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(.25,.3,.8,8),new THREE.MeshPhongMaterial({color:0xd32f2f}));
+  body.position.set(0,.4,0);g.add(body);
+  const cap=new THREE.Mesh(new THREE.SphereGeometry(.28,8,8),new THREE.MeshPhongMaterial({color:0xb71c1c}));
+  cap.position.set(0,.85,0);g.add(cap);
+  g.userData.type="hydrant";return g;
+}
+function buildTrashcan(){
+  const g=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(.35,.3,.9,8),new THREE.MeshPhongMaterial({color:0x616161}));
+  body.position.set(0,.45,0);g.add(body);
+  const lid=new THREE.Mesh(new THREE.CylinderGeometry(.38,.38,.06,8),new THREE.MeshPhongMaterial({color:0x757575}));
+  lid.position.set(0,.93,0);g.add(lid);
+  g.userData.type="trashcan";return g;
+}
+function buildCone(){
+  const g=new THREE.Group();
+  const cone=new THREE.Mesh(new THREE.ConeGeometry(.25,.7,8),new THREE.MeshPhongMaterial({color:0xff6f00}));
+  cone.position.set(0,.35,0);g.add(cone);
+  g.userData.type="cone";return g;
+}
+function buildBarrel(){
+  const g=new THREE.Group();
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(.4,.4,.8,10),new THREE.MeshPhongMaterial({color:0x4e342e}));
+  body.position.set(0,.4,0);g.add(body);
+  g.userData.type="barrel";return g;
+}
+function buildChicken(){const g=new THREE.Group();const b=new THREE.Mesh(new THREE.SphereGeometry(.35,8,8),new THREE.MeshPhongMaterial({color:0xfff9c4}));b.position.y=.5;b.scale.set(1,.9,1.2);g.add(b);const hd=new THREE.Mesh(new THREE.SphereGeometry(.18,8,8),new THREE.MeshPhongMaterial({color:0xfff9c4}));hd.position.set(0,.9,.25);g.add(hd);const bk=new THREE.Mesh(new THREE.ConeGeometry(.06,.15,6),new THREE.MeshPhongMaterial({color:0xff8f00}));bk.position.set(0,.88,.45);bk.rotation.x=-Math.PI/2;g.add(bk);const cmb=new THREE.Mesh(new THREE.SphereGeometry(.08,6,6),new THREE.MeshPhongMaterial({color:0xd32f2f}));cmb.position.set(0,1.08,.2);g.add(cmb);g.userData.type="chicken";return g;}
 
 function buildRamp(){
   const g = new THREE.Group();
@@ -359,6 +401,79 @@ function buildRamp(){
   const ar=new THREE.Mesh(new THREE.ConeGeometry(0.3,0.5,3),new THREE.MeshPhongMaterial({color:0xff6f00,emissive:0xff6f00,emissiveIntensity:.5}));
   ar.position.set(0,0.7,0);ar.rotation.x=-Math.PI/2;g.add(ar);
   g.userData.type="ramp"; return g;
+}
+
+/* Tow truck - rusty brown, Mater-inspired */
+function buildTowTruck(){
+  const g = new THREE.Group();
+  const rustMat = new THREE.MeshPhongMaterial({color:0x8B5E3C, shininess:20});
+  const rustDark = new THREE.MeshPhongMaterial({color:0x6B3F1F, shininess:10});
+  // Truck bed (flat back)
+  const bed = new THREE.Mesh(new THREE.BoxGeometry(2.4, 0.3, 3.5), rustMat);
+  bed.position.set(0, 0.55, -1); g.add(bed);
+  // Cab
+  const cab = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.2, 2), rustMat);
+  cab.position.set(0, 1.15, 1.2); g.add(cab);
+  // Cab roof
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.12, 2.1), rustDark);
+  roof.position.set(0, 1.8, 1.2); g.add(roof);
+  // Windshield
+  const wsMat = new THREE.MeshPhongMaterial({color:0x90caf9, transparent:true, opacity:0.4});
+  const ws = new THREE.Mesh(new THREE.PlaneGeometry(1.8, 0.8), wsMat);
+  ws.position.set(0, 1.4, 2.21); g.add(ws);
+  // Rusty patches (darker spots)
+  const patch1 = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.5), rustDark);
+  patch1.position.set(-0.6, 0.6, -2.76); g.add(patch1);
+  const patch2 = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.4), rustDark);
+  patch2.position.set(0.8, 1.0, 2.21); g.add(patch2);
+  // Headlights (slightly crooked for character)
+  const hlMat = new THREE.MeshPhongMaterial({color:0xffffaa, emissive:0xffff44, emissiveIntensity:0.8});
+  const hl1 = new THREE.Mesh(new THREE.SphereGeometry(0.15, 6, 6), hlMat);
+  hl1.position.set(-0.8, 0.9, 2.22); g.add(hl1);
+  const hl2 = new THREE.Mesh(new THREE.SphereGeometry(0.15, 6, 6), hlMat);
+  hl2.position.set(0.8, 0.95, 2.22); g.add(hl2);
+  // Tow hook/crane arm
+  const armMat = new THREE.MeshPhongMaterial({color:0x555555});
+  const arm = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 2.5), armMat);
+  arm.position.set(0, 1.0, -2.0); arm.rotation.x = -0.2; g.add(arm);
+  // Vertical crane post
+  const post = new THREE.Mesh(new THREE.BoxGeometry(0.15, 1.5, 0.15), armMat);
+  post.position.set(0, 1.2, -0.5); g.add(post);
+  // Hook
+  const hook = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.04, 6, 8, Math.PI), armMat);
+  hook.position.set(0, 0.5, -3.1); hook.rotation.x = Math.PI; g.add(hook);
+  // Chain (small cylinders)
+  for(let i = 0; i < 4; i++){
+    const link = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.03, 0.2, 6), armMat);
+    link.position.set(0, 0.6 + i*0.15, -3.1);
+    link.rotation.x = i % 2 === 0 ? 0.3 : -0.3;
+    g.add(link);
+  }
+  // Wheels (bigger truck wheels)
+  const tireMat = new THREE.MeshPhongMaterial({color:0x1a1a1a});
+  const rimMat2 = new THREE.MeshPhongMaterial({color:0x999999});
+  [[-1.2,0.4,1.5],[-1.2,0.4,-1.5],[1.2,0.4,1.5],[1.2,0.4,-1.5]].forEach(p=>{
+    const tire = new THREE.Mesh(new THREE.CylinderGeometry(0.45,0.45,0.35,12), tireMat);
+    tire.rotation.z = Math.PI/2; tire.position.set(p[0],p[1],p[2]); g.add(tire);
+    const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.25,0.36,8), rimMat2);
+    rim.rotation.z = Math.PI/2; rim.position.set(p[0],p[1],p[2]); g.add(rim);
+  });
+  // Buck teeth / smile on front (character touch)
+  const toothMat = new THREE.MeshPhongMaterial({color:0xffffff});
+  const t1 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.15, 0.05), toothMat);
+  t1.position.set(-0.08, 0.55, 2.23); g.add(t1);
+  const t2 = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.15, 0.05), toothMat);
+  t2.position.set(0.08, 0.55, 2.23); g.add(t2);
+  // Eyes above windshield (on the roof like Mater)
+  const eyeWhite = new THREE.MeshPhongMaterial({color:0xffffff});
+  const eyePupil = new THREE.MeshPhongMaterial({color:0x3e2723});
+  [-0.35, 0.35].forEach(x => {
+    const ew = new THREE.Mesh(new THREE.SphereGeometry(0.18, 8, 8), eyeWhite);
+    ew.position.set(x, 1.95, 1.8); g.add(ew);
+    const ep = new THREE.Mesh(new THREE.SphereGeometry(0.09, 6, 6), eyePupil);
+    ep.position.set(x, 1.95, 1.95); g.add(ep);
+  });
+  return g;
 }
 
 /* Finish line flag */
@@ -489,12 +604,12 @@ function buildSidewalk(){
 function buildWillisTower(){
   const g=new THREE.Group();
   const mat=new THREE.MeshPhongMaterial({color:0x1a1a2e});
-  g.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(8,35,6),mat),{position:new THREE.Vector3(0,17.5,0)}));
-  g.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(6,10,5),mat),{position:new THREE.Vector3(0,40,0)}));
-  g.add(Object.assign(new THREE.Mesh(new THREE.BoxGeometry(4,8,4),mat),{position:new THREE.Vector3(0,49,0)}));
+  const wb=new THREE.Mesh(new THREE.BoxGeometry(8,35,6),mat);wb.position.set(0,17.5,0);g.add(wb);
+  const wm2=new THREE.Mesh(new THREE.BoxGeometry(6,10,5),mat);wm2.position.set(0,40,0);g.add(wm2);
+  const wt=new THREE.Mesh(new THREE.BoxGeometry(4,8,4),mat);wt.position.set(0,49,0);g.add(wt);
   const am=new THREE.MeshPhongMaterial({color:0x666666});
-  g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(.12,.1,20,6),am),{position:new THREE.Vector3(-1,63,0)}));
-  g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(.1,.08,16,6),am),{position:new THREE.Vector3(1,61,0)}));
+  const wa1=new THREE.Mesh(new THREE.CylinderGeometry(.12,.1,20,6),am);wa1.position.set(-1,63,0);g.add(wa1);
+  const wa2=new THREE.Mesh(new THREE.CylinderGeometry(.1,.08,16,6),am);wa2.position.set(1,61,0);g.add(wa2);
   const bm=new THREE.MeshPhongMaterial({color:0xff0000,emissive:0xff0000,emissiveIntensity:1});
   const b1=new THREE.Mesh(new THREE.SphereGeometry(.2,6,6),bm);b1.position.set(-1,73,0);b1.name="blink";g.add(b1);
   const b2=new THREE.Mesh(new THREE.SphereGeometry(.18,6,6),bm);b2.position.set(1,69,0);b2.name="blink";g.add(b2);
@@ -695,6 +810,11 @@ export class EstrellaGame {
     // Victory state
     this.victoryPhase = 0;
     this.victoryTimer = 0;
+    // Crash/tow animation state
+    this.crashAnim = false;
+    this.crashTimer = 0;
+    this.towTruck = null;
+    this._crashSavedX = 0;
   }
 
   _resize(){
@@ -832,6 +952,7 @@ export class EstrellaGame {
   update(dt){
     if(this.state==="intro"){this._updateIntro(dt);return;}
     if(this.state==="victory"){this._updateVictory(dt);return;}
+    if(this.state==="crashing"){this._updateCrashAnim(dt);return;}
     if(this.state!=="playing"||this.paused)return;
     if(this.mode==="race")this._updateRace(dt);
     else this._updateLoco(dt);
@@ -1030,12 +1151,75 @@ export class EstrellaGame {
   _crash(){
     sfx.crash();this.lives--;
     if(this.lives<=0){this._endGame(false,"No lives left!");return;}
-    this.invincible=3;this.spawnCooldown=3;
+    this._removePart();
+    // Clear nearby obstacles
     for(let i=this.obstacles.length-1;i>=0;i--){
       const o=this.obstacles[i];
-      if(o.position.z<this.playerCar.position.z+5){this.scene.remove(o);this.obstacles.splice(i,1);}
+      if(o.position.z<this.playerCar.position.z+8){this.scene.remove(o);this.obstacles.splice(i,1);}
     }
+    // Begin tow truck crash animation
+    this.state="crashing";
+    this.crashTimer=0;
+    this._crashSavedX=this.playerCar.position.x;
+    const slideDir=this._crashSavedX>=0?1:-1;
+    this._crashSlideDir=slideDir;
+    // Spawn tow truck behind the player car
+    this.towTruck=buildTowTruck();
+    this.towTruck.position.set(this._crashSavedX, 0, this.playerCar.position.z+35);
+    this.scene.add(this.towTruck);
+    sfx.towHorn();
     if(this.onCrash)this.onCrash(this.lives);
+  }
+
+  _updateCrashAnim(dt){
+    this.crashTimer+=dt;
+    const car=this.playerCar;
+    const truck=this.towTruck;
+    if(!car||!truck)return;
+    const t=this.crashTimer;
+    const slideDir=this._crashSlideDir;
+    const roadEdge=(ROAD_W/2-2)*slideDir;
+
+    if(t<0.5){
+      // Phase 1: Car tilts and slides to side of road
+      const p=t/0.5;
+      car.rotation.z=slideDir*(-0.35)*p;
+      car.position.x=this._crashSavedX+(roadEdge-this._crashSavedX)*p;
+    } else if(t<2.0){
+      // Phase 2: Tow truck drives in from behind to car position
+      const p=(t-0.5)/1.5;
+      const targetZ=car.position.z+5;
+      truck.position.z=car.position.z+35-(35-5)*p;
+      truck.position.x=car.position.x;
+      // Truck wheels bounce a little
+      truck.position.y=Math.abs(Math.sin(t*8))*0.05;
+    } else if(t<3.5){
+      // Phase 3: Tow truck pulls car back to center of road
+      const p=(t-2.0)/1.5;
+      const centerX=0;
+      car.position.x=roadEdge+(centerX-roadEdge)*p;
+      car.rotation.z=slideDir*(-0.35)*(1-p);
+      truck.position.x=car.position.x;
+      truck.position.z=car.position.z+5;
+    } else if(t<4.2){
+      // Phase 4: Tow truck drives away ahead
+      const p=(t-3.5)/0.7;
+      car.rotation.z=0;
+      car.position.x=0;
+      truck.position.z=car.position.z+5-40*p;
+      truck.position.x=0;
+    } else {
+      // Done: remove tow truck, resume playing
+      this.scene.remove(truck);
+      this.towTruck=null;
+      car.rotation.z=0;
+      car.position.x=0;
+      this.invincible=3;
+      this.spawnCooldown=3;
+      this.state="playing";
+    }
+    // Keep rendering during animation
+    this.renderer.render(this.scene,this.camera);
   }
 
   _removePart(){

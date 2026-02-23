@@ -126,6 +126,22 @@ class SoundFX {
       });
     });
   }
+  rustyWheels(){
+    this._play(c=>{
+      const t=c.currentTime;
+      // Squeaky rusty wheel sound - oscillating high-pitched squeak
+      for(let i=0;i<6;i++){
+        const o=c.createOscillator(),g=c.createGain();
+        o.type="sawtooth";
+        o.frequency.setValueAtTime(800+i*50,t+i*0.4);
+        o.frequency.linearRampToValueAtTime(400+i*30,t+i*0.4+0.2);
+        g.gain.setValueAtTime(.06,t+i*0.4);
+        g.gain.exponentialRampToValueAtTime(.005,t+i*0.4+0.35);
+        o.connect(g);g.connect(c.destination);
+        o.start(t+i*0.4);o.stop(t+i*0.4+0.4);
+      }
+    });
+  }
   starChime(){
     this._play(c=>{
       const t=c.currentTime;
@@ -480,18 +496,19 @@ function buildGasCan(){
 }
 function buildStarPickup(){
   const g = new THREE.Group();
-  const mat = new THREE.MeshPhongMaterial({color:0xffd600,emissive:0xffab00,emissiveIntensity:0.7,shininess:100});
-  for(let i=0;i<5;i++){
-    const spike = new THREE.Mesh(new THREE.ConeGeometry(0.18,0.6,4),mat);
-    const a = (i/5)*Math.PI*2 - Math.PI/2;
-    spike.position.set(Math.cos(a)*0.25,Math.sin(a)*0.25+0.8,0);
-    spike.rotation.z = a+Math.PI/2; g.add(spike);
-  }
-  const center = new THREE.Mesh(new THREE.SphereGeometry(0.22,8,8),mat);
-  center.position.y=0.8;g.add(center);
+  // Star emoji sprite
+  const cnv=document.createElement("canvas");cnv.width=64;cnv.height=64;
+  const ctx=cnv.getContext("2d");
+  ctx.font="48px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";
+  ctx.fillText("\u2B50",32,32);
+  const tex=new THREE.CanvasTexture(cnv);
+  const spr=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true}));
+  spr.scale.set(1.5,1.5,1);spr.position.y=1;
+  g.add(spr);
+  // Glow ring
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.5,0.6,16),
     new THREE.MeshPhongMaterial({color:0xffe082,emissive:0xffcc02,emissiveIntensity:0.4,transparent:true,opacity:0.5,side:THREE.DoubleSide}));
-  ring.position.y=0.8;ring.rotation.x=Math.PI/2;g.add(ring);
+  ring.position.y=1;ring.rotation.x=Math.PI/2;g.add(ring);
   g.userData.type="star"; return g;
 }
 
@@ -974,37 +991,26 @@ function buildStreetSign(){
 
 function buildChicagoRiver(){
   const g = new THREE.Group();
-  // River water - blue-green surface
+  // River water - runs perpendicular to road, visible on the sides
   const waterMat = new THREE.MeshPhongMaterial({color:0x1b8a6b, transparent:true, opacity:0.85, shininess:120});
-  const water = new THREE.Mesh(new THREE.PlaneGeometry(12, 5), waterMat);
-  water.rotation.x = -Math.PI/2; water.position.set(0, -0.05, 0); g.add(water);
-  // Bridge railings
+  const water = new THREE.Mesh(new THREE.PlaneGeometry(18, 6), waterMat);
+  water.rotation.x = -Math.PI/2; water.position.set(0, -0.15, 0); g.add(water);
+  // Bridge railings at road edges only (low, no obstruction)
   const railMat = new THREE.MeshPhongMaterial({color:0x616161});
-  [-6, 6].forEach(x => {
-    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.8, 5), railMat);
-    rail.position.set(x, 0.4, 0); g.add(rail);
-    // Railing posts
-    for(let z=-2; z<=2; z++){
-      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,0.9,6), railMat);
-      post.position.set(x, 0.45, z); g.add(post);
+  [-ROAD_W/2-0.5, ROAD_W/2+0.5].forEach(x => {
+    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.5, 6), railMat);
+    rail.position.set(x, 0.25, 0); g.add(rail);
+    for(let z=-2.5; z<=2.5; z+=1.25){
+      const post = new THREE.Mesh(new THREE.CylinderGeometry(0.05,0.05,0.6,6), railMat);
+      post.position.set(x, 0.3, z); g.add(post);
     }
   });
-  // Bridge road surface
-  const bridgeMat = new THREE.MeshPhongMaterial({color:0x4a4a4a});
-  const bridgeDeck = new THREE.Mesh(new THREE.BoxGeometry(12, 0.2, 5), bridgeMat);
-  bridgeDeck.position.set(0, 0, 0); g.add(bridgeDeck);
-  // Bridge truss arches (two steel arches)
-  const trussMat = new THREE.MeshPhongMaterial({color:0x546e7a});
-  [-3, 3].forEach(x => {
-    const arch = new THREE.Mesh(new THREE.TorusGeometry(2, 0.08, 6, 12, Math.PI), trussMat);
-    arch.position.set(x, 0.1, 0); arch.rotation.y = Math.PI/2; g.add(arch);
-  });
-  // Water shimmer - small floating highlights
-  for(let i=0;i<6;i++){
-    const shimmer = new THREE.Mesh(new THREE.PlaneGeometry(0.4,0.15),
+  // Water shimmer
+  for(let i=0;i<8;i++){
+    const shimmer = new THREE.Mesh(new THREE.PlaneGeometry(0.5,0.2),
       new THREE.MeshPhongMaterial({color:0x80cbc4,emissive:0x4db6ac,emissiveIntensity:0.3,transparent:true,opacity:0.5}));
     shimmer.rotation.x=-Math.PI/2;
-    shimmer.position.set((Math.random()-0.5)*10, -0.03, (Math.random()-0.5)*4);
+    shimmer.position.set((Math.random()-0.5)*16, -0.12, (Math.random()-0.5)*5);
     g.add(shimmer);
   }
   g.userData.type="river"; return g;
@@ -1041,7 +1047,10 @@ function buildSkyline(scene){
     {x:-30,w:4,h:15,d:4},{x:-20,w:8,h:22,d:6},{x:-12,w:5,h:28,d:5},
     {x:12,w:5,h:20,d:5},{x:20,w:7,h:35,d:6},{x:30,w:4,h:16,d:4},
     {x:40,w:6,h:24,d:5},{x:50,w:5,h:19,d:4},{x:60,w:8,h:27,d:6},
-    {x:-55,w:4,h:12,d:3},{x:25,w:3,h:14,d:3},{x:45,w:5,h:21,d:4},{x:-45,w:6,h:17,d:4}
+    {x:-55,w:4,h:12,d:3},{x:25,w:3,h:14,d:3},{x:45,w:5,h:21,d:4},{x:-45,w:6,h:17,d:4},
+    {x:-70,w:5,h:20,d:4},{x:-65,w:4,h:14,d:3},{x:65,w:6,h:23,d:5},{x:70,w:4,h:16,d:3},
+    {x:-35,w:3,h:11,d:3},{x:35,w:4,h:13,d:3},{x:55,w:3,h:10,d:3},{x:-25,w:5,h:18,d:4},
+    {x:-75,w:7,h:22,d:5},{x:75,w:5,h:19,d:4},{x:-80,w:4,h:15,d:3},{x:80,w:6,h:17,d:4}
   ];
   const mat=new THREE.MeshPhongMaterial({color:0x0d1b2a});
   const wm=new THREE.MeshPhongMaterial({color:0xfff8e1,emissive:0xffe082,emissiveIntensity:.3,transparent:true,opacity:.4});
@@ -1658,6 +1667,7 @@ export class EstrellaGame {
     // Begin tow truck crash animation
     this.state="crashing";
     this.crashTimer=0;
+    sfx.stopEngine(); // No driving sound during tow
     this._crashSavedX=this.playerCar.position.x;
     const slideDir=this._crashSavedX>=0?1:-1;
     this._crashSlideDir=slideDir;
@@ -1665,7 +1675,7 @@ export class EstrellaGame {
     this.towTruck=buildTowTruck();
     this.towTruck.position.set(this._crashSavedX, 0, this.playerCar.position.z+35);
     this.scene.add(this.towTruck);
-    sfx.towHorn();sfx.towLaugh();
+    sfx.towHorn();sfx.towLaugh();sfx.rustyWheels();
     if(this.onCrash)this.onCrash(this.lives);
   }
 
@@ -1715,6 +1725,7 @@ export class EstrellaGame {
       this.invincible=3;
       this.spawnCooldown=3;
       this.state="playing";
+      sfx.engine(this.speed); // Resume engine sound
     }
     // Keep rendering during animation
     this.renderer.render(this.scene,this.camera);
@@ -1803,5 +1814,10 @@ export class EstrellaGame {
     this.renderer.render(this.scene,this.camera);
   }
 
-  togglePause(){this.paused=!this.paused;return this.paused;}
+  togglePause(){
+    this.paused=!this.paused;
+    if(this.paused){sfx.stopEngine();sfx.stopMusic();}
+    else{sfx.music();sfx.engine(this.speed);}
+    return this.paused;
+  }
 }

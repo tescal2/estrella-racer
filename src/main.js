@@ -1,25 +1,35 @@
-import { EstrellaGame, CAR_PRESETS } from "./game.js";
+import { EstrellaGame } from "./game.js";
 import { STORAGE_LANGUAGE_KEY, getLanguageButtonText, t } from "./i18n.js";
-import { loadProfile, saveProfile } from "./personalization.js";
-import { byId, renderCarGrid, setText, setVisible, setupHoldButton } from "./ui.js";
+import { loadProfile } from "./personalization.js";
+import { byId, setText, setVisible, setupHoldButton } from "./ui.js";
 
-const STORAGE_CAR_KEY = "estrella-racer-selected-car";
-const STORAGE_MUTE_KEY = "estrella-racer-muted";
 const STORAGE_DRIVER_KEY = "estrella-racer-driver";
+const STORAGE_MUTE_KEY = "estrella-racer-muted";
 const STORAGE_TILT_KEY = "estrella-racer-tilt";
 const AVATAR_CANDIDATES = [
   "assets/reference/axel-jade/Axel-Jade.heic",
   "assets/reference/axel-jade/axel-jade.heic",
   "assets/reference/axel-jade/side-by-side.jpg",
-  "assets/reference/axel-jade/side-by-side.png",
   "assets/reference/axel-jade/side-by-side.jpeg",
+  "assets/reference/axel-jade/side-by-side.png",
   "assets/reference/axel-jade/photo.jpg",
-  "assets/reference/axel-jade/photo.png",
-  "assets/reference/axel-jade/photo.jpeg"
+  "assets/reference/axel-jade/photo.jpeg",
+  "assets/reference/axel-jade/photo.png"
 ];
 
 const DEVICE_ORIENTATION_SUPPORTED = typeof window.DeviceOrientationEvent !== "undefined";
 const DEVICE_ORIENTATION_NEEDS_PERMISSION = DEVICE_ORIENTATION_SUPPORTED && typeof window.DeviceOrientationEvent.requestPermission === "function";
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function formatTimer(seconds) {
+  const safe = Math.max(0, Math.floor(seconds));
+  const mins = Math.floor(safe / 60).toString().padStart(2, "0");
+  const secs = (safe % 60).toString().padStart(2, "0");
+  return `${mins}:${secs}`;
+}
 
 const elements = {
   canvas: byId("gameCanvas"),
@@ -34,24 +44,16 @@ const elements = {
   controls: byId("controls"),
   gameTitle: byId("gameTitle"),
   gameSubtitle: byId("gameSubtitle"),
-  missionHint: byId("missionHint"),
+  quickHint: byId("quickHint"),
   startRaceBtn: byId("startRaceBtn"),
   startLocoBtn: byId("startLocoBtn"),
-  carPanelTitle: byId("carPanelTitle"),
-  carPanelHint: byId("carPanelHint"),
+  driverSelectTitle: byId("driverSelectTitle"),
   avatarPreview: byId("avatarPreview"),
   avatarHint: byId("avatarHint"),
-  driverSelectTitle: byId("driverSelectTitle"),
   driverCards: byId("driverCards"),
   driverPrimaryBtn: byId("driverPrimaryBtn"),
   driverSecondaryBtn: byId("driverSecondaryBtn"),
   launchSelectedBtn: byId("launchSelectedBtn"),
-  primaryNameLabel: byId("primaryNameLabel"),
-  secondaryNameLabel: byId("secondaryNameLabel"),
-  primaryNameInput: byId("primaryNameInput"),
-  secondaryNameInput: byId("secondaryNameInput"),
-  saveNamesBtn: byId("saveNamesBtn"),
-  carGrid: byId("carGrid"),
   closeGarageBtn: byId("closeGarageBtn"),
   resultTitle: byId("resultTitle"),
   resultMessage: byId("resultMessage"),
@@ -60,11 +62,9 @@ const elements = {
   hudMode: byId("hudMode"),
   hudTimer: byId("hudTimer"),
   hudFuel: byId("hudFuel"),
-  hudStars: byId("hudStars"),
+  hudDamage: byId("hudDamage"),
   hudScore: byId("hudScore"),
   hudSrs: byId("hudSrs"),
-  hudCombo: byId("hudCombo"),
-  hudPlates: byId("hudPlates"),
   hudFlash: byId("hudFlash"),
   pauseBtn: byId("pauseBtn"),
   exitBtn: byId("exitBtn"),
@@ -74,24 +74,12 @@ const elements = {
   controlRight: byId("controlRight")
 };
 
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
-
-function formatTimer(seconds) {
-  const safe = Math.max(0, Math.floor(seconds));
-  const mins = Math.floor(safe / 60).toString().padStart(2, "0");
-  const secs = (safe % 60).toString().padStart(2, "0");
-  return `${mins}:${secs}`;
-}
-
 const game = new EstrellaGame(elements.canvas);
 let language = localStorage.getItem(STORAGE_LANGUAGE_KEY) === "es" ? "es" : "en";
-let profile = loadProfile();
-let selectedCarId = localStorage.getItem(STORAGE_CAR_KEY) || CAR_PRESETS[0].id;
+const profile = loadProfile();
 let selectedDriverKey = localStorage.getItem(STORAGE_DRIVER_KEY) === "secondary" ? "secondary" : "primary";
 let resultShown = false;
-let pendingMode = null;
+let pendingMode = "race";
 
 const tiltState = {
   supported: DEVICE_ORIENTATION_SUPPORTED,
@@ -106,12 +94,8 @@ if (tiltState.supported && !tiltState.needsPermission && tiltState.wanted) {
 
 game.setLanguage(language);
 game.setProfile(profile);
-game.setSelectedCar(selectedCarId);
 game.setDriverKey(selectedDriverKey);
 game.setMuted(localStorage.getItem(STORAGE_MUTE_KEY) === "1");
-
-elements.primaryNameInput.value = profile.primaryName;
-elements.secondaryNameInput.value = profile.secondaryName;
 
 function isInPlayState() {
   const state = game.getRunState();
@@ -123,52 +107,8 @@ function getSelectedDriverName() {
 }
 
 function syncControlsVisibility() {
-  const state = game.getRunState();
-  const showControls = state === "playing" || state === "paused";
-  setVisible(elements.controls, showControls);
-  setVisible(elements.controlUp, true);
-  setVisible(elements.controlDown, true);
-  setVisible(elements.controlLeft, true);
-  setVisible(elements.controlRight, true);
-}
-
-function setHudFlashClass(element, className, enabled) {
-  element.classList.toggle(className, Boolean(enabled));
-}
-
-function refreshHud() {
-  const snapshot = game.getSnapshot();
-  setText(elements.hudMode, snapshot.mode === "race" ? t(language, "modeRace") : t(language, "modeLoco"));
-  setText(elements.hudTimer, `⏱ ${t(language, "timer")}: ${formatTimer(snapshot.timer)}`);
-  setText(elements.hudFuel, `⛽ ${t(language, "fuel")}: ${snapshot.fuel}%`);
-  setText(elements.hudStars, `⭐ ${t(language, "stars")}: ${snapshot.stars}`);
-  setText(elements.hudScore, `${t(language, "score")}: ${snapshot.score}`);
-  setText(elements.hudSrs, `${t(language, "srs")}: ${snapshot.srs}`);
-  setText(elements.hudCombo, `${t(language, "combo")}: x${snapshot.combo}`);
-  setText(elements.hudPlates, `${t(language, "plate")}: ${snapshot.plate}`);
-
-  setHudFlashClass(elements.hudScore, "flash", snapshot.scorePulse);
-  setHudFlashClass(elements.hudSrs, "flash", snapshot.srsPulse);
-  setHudFlashClass(elements.hudFuel, "critical", snapshot.fuel <= 20);
-
-  if (snapshot.flashEventKey) {
-    setText(elements.hudFlash, t(language, snapshot.flashEventKey));
-    setVisible(elements.hudFlash, true);
-  } else {
-    setVisible(elements.hudFlash, false);
-  }
-
-  const pauseText = game.getRunState() === "paused" ? t(language, "resume") : t(language, "pause");
-  setText(elements.pauseBtn, pauseText);
-}
-
-function refreshCarGrid() {
-  renderCarGrid(elements.carGrid, CAR_PRESETS, selectedCarId, language, t, (nextId) => {
-    selectedCarId = nextId;
-    localStorage.setItem(STORAGE_CAR_KEY, selectedCarId);
-    game.setSelectedCar(selectedCarId);
-    refreshCarGrid();
-  });
+  const active = game.getRunState() === "playing" || game.getRunState() === "paused";
+  setVisible(elements.controls, active);
 }
 
 function refreshDriverButtons() {
@@ -179,14 +119,8 @@ function refreshDriverButtons() {
 }
 
 function refreshLaunchButton() {
-  const driverName = getSelectedDriverName();
-  if (pendingMode === "race") {
-    setText(elements.launchSelectedBtn, t(language, "launchRaceAs", { name: driverName }));
-  } else if (pendingMode === "loco") {
-    setText(elements.launchSelectedBtn, t(language, "launchLocoAs", { name: driverName }));
-  } else {
-    setText(elements.launchSelectedBtn, t(language, "quickLaunch"));
-  }
+  const name = getSelectedDriverName();
+  setText(elements.launchSelectedBtn, pendingMode === "loco" ? t(language, "launchLocoAs", { name }) : t(language, "launchRaceAs", { name }));
 }
 
 function refreshTiltButtonText() {
@@ -197,32 +131,44 @@ function refreshTiltButtonText() {
   setText(elements.tiltBtn, tiltState.enabled ? t(language, "tiltOn") : t(language, "tiltOff"));
 }
 
+function refreshHud() {
+  const snapshot = game.getSnapshot();
+  setText(elements.hudMode, snapshot.mode === "race" ? t(language, "modeRace") : t(language, "modeLoco"));
+  setText(elements.hudTimer, `⏱ ${formatTimer(snapshot.timer)}`);
+  setText(elements.hudFuel, `⛽ ${snapshot.fuel}%`);
+  setText(elements.hudDamage, `🛠 ${snapshot.damage}%`);
+  setText(elements.hudScore, `${t(language, "score")} ${snapshot.score}`);
+  setText(elements.hudSrs, `${t(language, "srs")} ${snapshot.srs}`);
+
+  elements.hudScore.classList.toggle("flash", snapshot.scorePulse);
+  elements.hudSrs.classList.toggle("flash", snapshot.srsPulse);
+  elements.hudFuel.classList.toggle("critical", snapshot.fuel <= 20);
+  elements.hudDamage.classList.toggle("critical", snapshot.damage >= 70);
+
+  if (snapshot.flashEventKey) {
+    setText(elements.hudFlash, t(language, snapshot.flashEventKey));
+    setVisible(elements.hudFlash, true);
+  } else {
+    setVisible(elements.hudFlash, false);
+  }
+  setText(elements.pauseBtn, game.getRunState() === "paused" ? t(language, "resume") : t(language, "pause"));
+}
+
 function refreshTexts() {
   setText(elements.gameTitle, t(language, "title"));
-  setText(
-    elements.gameSubtitle,
-    t(language, "subtitle", {
-      primary: profile.primaryName,
-      secondary: profile.secondaryName
-    })
-  );
-  setText(elements.missionHint, t(language, "missionHint"));
+  setText(elements.gameSubtitle, t(language, "subtitle"));
+  setText(elements.quickHint, t(language, "quickHint"));
   setText(elements.startRaceBtn, t(language, "startRace"));
   setText(elements.startLocoBtn, t(language, "startLoco"));
   setText(elements.languageBtn, getLanguageButtonText(language));
   refreshTiltButtonText();
-  setText(elements.audioBtn, game.muted ? t(language, "audioOff") : t(language, "audioOn"));
-  setText(elements.garageBtn, t(language, "openGarage"));
-  setText(elements.carPanelTitle, t(language, "garageTitle"));
-  setText(elements.carPanelHint, t(language, "garageHint"));
-  setText(elements.driverSelectTitle, t(language, "driverSelectTitle"));
-  setText(elements.primaryNameLabel, t(language, "primaryName"));
-  setText(elements.secondaryNameLabel, t(language, "secondaryName"));
-  setText(elements.saveNamesBtn, t(language, "saveNames"));
-  setText(elements.closeGarageBtn, t(language, "closeGarage"));
+  setText(elements.audioBtn, game.muted ? t(language, "musicOff") : t(language, "musicOn"));
+  setText(elements.garageBtn, t(language, "openSelect"));
+  setText(elements.driverSelectTitle, t(language, "selectDriver"));
+  setText(elements.closeGarageBtn, t(language, "closeSelect"));
   setText(elements.restartBtn, t(language, "restart"));
-  setText(elements.backMenuBtn, t(language, "backMenu"));
-  setText(elements.exitBtn, t(language, "exit"));
+  setText(elements.backMenuBtn, t(language, "menu"));
+  setText(elements.exitBtn, t(language, "menu"));
   setText(elements.controlLeft, t(language, "controlLeft"));
   setText(elements.controlUp, t(language, "controlUp"));
   setText(elements.controlDown, t(language, "controlDown"));
@@ -244,31 +190,29 @@ function applyDriver(driverKey) {
 function loadAvatarPreview() {
   const cacheBuster = `?v=${Date.now()}`;
   let index = 0;
-  const preview = elements.avatarPreview;
-  const hint = elements.avatarHint;
 
   const clearPhotoState = () => {
     elements.driverCards.classList.remove("photoLoaded");
     elements.driverCards.style.removeProperty("--driver-photo");
+    elements.avatarPreview.classList.add("hidden");
+    elements.avatarPreview.removeAttribute("src");
   };
 
   const tryNext = () => {
     if (index >= AVATAR_CANDIDATES.length) {
-      preview.classList.add("hidden");
-      preview.removeAttribute("src");
       clearPhotoState();
-      setText(hint, t(language, "photoHintMissing"));
+      setText(elements.avatarHint, t(language, "photoHintMissing"));
       return;
     }
     const candidate = `${AVATAR_CANDIDATES[index]}${cacheBuster}`;
     index += 1;
     const probe = new Image();
     probe.onload = () => {
-      preview.src = candidate;
-      preview.classList.remove("hidden");
+      elements.avatarPreview.src = candidate;
+      elements.avatarPreview.classList.remove("hidden");
       elements.driverCards.classList.add("photoLoaded");
       elements.driverCards.style.setProperty("--driver-photo", `url("${candidate}")`);
-      setText(hint, t(language, "photoHintLoaded"));
+      setText(elements.avatarHint, t(language, "photoHintLoaded"));
     };
     probe.onerror = tryNext;
     probe.src = candidate;
@@ -278,7 +222,6 @@ function loadAvatarPreview() {
 }
 
 function showMenu() {
-  pendingMode = null;
   game.stopToMenu();
   resultShown = false;
   setVisible(elements.menuPanel, true);
@@ -286,26 +229,13 @@ function showMenu() {
   setVisible(elements.resultPanel, false);
   setVisible(elements.hud, false);
   setVisible(elements.controls, false);
-  refreshLaunchButton();
 }
 
-function openSelection(mode) {
+function openDriverSelect(mode) {
   if (isInPlayState()) {
     return;
   }
-  pendingMode = mode;
-  setVisible(elements.menuPanel, false);
-  setVisible(elements.resultPanel, false);
-  setVisible(elements.carPanel, true);
-  refreshLaunchButton();
-  loadAvatarPreview();
-}
-
-function openGarage() {
-  if (isInPlayState()) {
-    return;
-  }
-  pendingMode = null;
+  pendingMode = mode || "race";
   setVisible(elements.menuPanel, false);
   setVisible(elements.resultPanel, false);
   setVisible(elements.carPanel, true);
@@ -350,8 +280,8 @@ async function startMode(mode) {
   if (tiltState.wanted) {
     await ensureTiltPermission();
   }
-  game.start(mode);
   game.setDriverKey(selectedDriverKey);
+  game.start(mode);
   resultShown = false;
   setVisible(elements.menuPanel, false);
   setVisible(elements.carPanel, false);
@@ -375,25 +305,9 @@ function toggleLanguage() {
   localStorage.setItem(STORAGE_LANGUAGE_KEY, language);
   game.setLanguage(language);
   refreshTexts();
-  refreshCarGrid();
   if (!elements.carPanel.classList.contains("hidden")) {
     loadAvatarPreview();
   }
-}
-
-function saveNameChanges() {
-  profile = saveProfile({
-    primaryName: elements.primaryNameInput.value,
-    secondaryName: elements.secondaryNameInput.value
-  });
-  elements.primaryNameInput.value = profile.primaryName;
-  elements.secondaryNameInput.value = profile.secondaryName;
-  game.setProfile(profile);
-  game.setDriverKey(selectedDriverKey);
-  refreshTexts();
-  const originalLabel = t(language, "saveNames");
-  setText(elements.saveNamesBtn, t(language, "namesSaved"));
-  setTimeout(() => setText(elements.saveNamesBtn, originalLabel), 900);
 }
 
 async function toggleTilt() {
@@ -427,16 +341,13 @@ elements.audioBtn.addEventListener("click", () => {
   localStorage.setItem(STORAGE_MUTE_KEY, muted ? "1" : "0");
   refreshTexts();
 });
-elements.garageBtn.addEventListener("click", openGarage);
-elements.startRaceBtn.addEventListener("click", () => openSelection("race"));
-elements.startLocoBtn.addEventListener("click", () => openSelection("loco"));
+elements.garageBtn.addEventListener("click", () => openDriverSelect("race"));
+elements.startRaceBtn.addEventListener("click", () => openDriverSelect("race"));
+elements.startLocoBtn.addEventListener("click", () => openDriverSelect("loco"));
 elements.driverPrimaryBtn.addEventListener("click", () => applyDriver("primary"));
 elements.driverSecondaryBtn.addEventListener("click", () => applyDriver("secondary"));
-elements.launchSelectedBtn.addEventListener("click", () => {
-  startMode(pendingMode || "race");
-});
+elements.launchSelectedBtn.addEventListener("click", () => startMode(pendingMode));
 elements.closeGarageBtn.addEventListener("click", showMenu);
-elements.saveNamesBtn.addEventListener("click", saveNameChanges);
 elements.pauseBtn.addEventListener("click", () => {
   game.togglePause();
   syncControlsVisibility();
@@ -462,11 +373,9 @@ for (const button of [elements.controlLeft, elements.controlUp, elements.control
       if (game.getRunState() !== "playing") {
         return;
       }
-      if (game.getMode() === "race" && control === "left") {
-        game.moveLane(-1);
-      }
-      if (game.getMode() === "race" && control === "right") {
-        game.moveLane(1);
+      if (game.getMode() === "race") {
+        if (control === "left") game.moveLane(-1);
+        if (control === "right") game.moveLane(1);
       }
       game.setControl(control, true);
     },
@@ -542,7 +451,7 @@ if (tiltState.supported) {
       return;
     }
     const side = clamp((event.gamma ?? 0) / 28, -1, 1);
-    const throttle = clamp((15 - (event.beta ?? 15)) / 32, -1, 1);
+    const throttle = clamp((15 - (event.beta ?? 15)) / 30, -1, 1);
     game.setTiltInput(side, throttle);
   });
 }
@@ -564,13 +473,11 @@ document.body.addEventListener(
 function loop(timestamp) {
   game.frame(timestamp);
   const state = game.getRunState();
-
   if (state === "playing" || state === "paused") {
     setVisible(elements.hud, true);
     syncControlsVisibility();
     refreshHud();
   }
-
   if (state === "gameover" && !resultShown) {
     resultShown = true;
     showResult();
@@ -578,7 +485,6 @@ function loop(timestamp) {
   requestAnimationFrame(loop);
 }
 
-refreshCarGrid();
 refreshTexts();
 showMenu();
 requestAnimationFrame(loop);

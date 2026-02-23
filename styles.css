@@ -6,13 +6,13 @@ body{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-c
   position:fixed;inset:0;width:100%;height:100%;display:block;
   background:radial-gradient(circle at 50% -20%,#2f3270 0%,#0f1331 55%,#090b1d 100%);
 }
-
 #overlay{position:fixed;inset:0;pointer-events:none}
+
 .glass{
   background:rgba(12,16,40,0.56);
   backdrop-filter:blur(8px);
   border:1px solid rgba(255,255,255,0.18);
-  box-shadow:0 0 18px rgba(92,160,255,0.2);
+  box-shadow:0 0 18px rgba(92,160,255,0.22);
 }
 
 #topBar{
@@ -20,118 +20,88 @@ body{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-c
   display:flex;gap:8px;justify-content:flex-end;padding:8px;border-radius:14px;pointer-events:auto;
 }
 
-.chip,.action,.controlBtn{
+.chip,.action,.controlBtn,.driverCard{
   pointer-events:auto;border:1px solid rgba(255,255,255,0.22);border-radius:12px;color:#fff;
   background:rgba(28,40,86,0.88);padding:10px 12px;font-weight:700;letter-spacing:0.2px;
   text-shadow:0 0 6px rgba(170,210,255,0.5);transition:transform 0.08s ease,filter 0.08s ease;
 }
-.chip:active,.action:active,.controlBtn:active{transform:scale(0.96);filter:brightness(1.1)}
+.chip:active,.action:active,.controlBtn:active,.driverCard:active{transform:scale(0.97);filter:brightness(1.1)}
+
 .action{
   background:linear-gradient(135deg,#ffca55 0%,#ff9e22 48%,#ff5f3f 100%);
   color:#1b1030;border-color:rgba(255,255,255,0.42);
 }
 
 .panel{
-  position:absolute;left:50%;transform:translateX(-50%);width:min(94vw,540px);pointer-events:auto;
-  border-radius:18px;padding:16px;
+  position:absolute;left:50%;transform:translateX(-50%);
+  width:min(94vw,520px);pointer-events:auto;border-radius:18px;padding:16px;
 }
-#menuPanel{
-  top:calc(72px + env(safe-area-inset-top));
-}
+#menuPanel{top:calc(74px + env(safe-area-inset-top))}
 #carPanel,#resultPanel{
-  top:calc(64px + env(safe-area-inset-top));
+  top:calc(66px + env(safe-area-inset-top));
   max-height:calc(100dvh - 88px - env(safe-area-inset-bottom));
   overflow:auto;
 }
 
-#gameTitle{font-size:clamp(1.6rem,4.4vw,2.4rem);text-align:center}
-#gameSubtitle{margin-top:8px;text-align:center;color:#dce8ff}
-.hint{margin-top:10px;color:#b5c9ff;font-size:0.95rem;line-height:1.35}
+#gameTitle{font-size:clamp(1.8rem,4.8vw,2.6rem);text-align:center;letter-spacing:0.5px}
+#gameSubtitle{margin-top:8px;text-align:center;color:#dce8ff;font-size:0.98rem}
+.hint{margin-top:10px;text-align:center;color:#b5c9ff;font-size:0.9rem;line-height:1.3}
 .stack{display:grid;gap:10px;margin-top:14px}
 
-#avatarFrame{margin-top:10px;border-radius:12px;padding:10px;min-height:86px;display:flex;gap:10px;align-items:center}
-#avatarFrame img{
-  width:98px;height:72px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,0.25);
+#avatarFrame{
+  margin-top:10px;border-radius:12px;padding:10px;min-height:88px;display:flex;gap:10px;align-items:center
 }
-#avatarHint{font-size:0.88rem;color:#cbd9ff;line-height:1.35}
-.driverTitle{margin-top:12px;font-size:1rem;color:#e4eeff}
-.driverCards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+#avatarFrame img{
+  width:116px;height:84px;object-fit:cover;border-radius:10px;border:1px solid rgba(255,255,255,0.25)
+}
+#avatarHint{font-size:0.86rem;color:#cbd9ff;line-height:1.3}
+
+#driverSelectTitle{text-align:center;font-size:1.08rem}
+.driverCards{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
 .driverCard{
-  border:1px solid rgba(255,255,255,0.25);border-radius:12px;padding:12px;
+  min-height:92px;
+  display:flex;align-items:flex-end;justify-content:center;padding:10px;
   background:linear-gradient(160deg,rgba(34,52,112,0.86),rgba(19,28,72,0.86));
-  color:#e8f2ff;font-weight:700;font-size:0.95rem;text-align:center;
   box-shadow:inset 0 0 18px rgba(120,190,255,0.12);
+  text-align:center;
 }
 .driverCards.photoLoaded .driverCard{
-  background-image:linear-gradient(160deg,rgba(18,26,58,0.58),rgba(12,18,44,0.72)),var(--driver-photo);
-  background-size:cover;
-  background-position:center;
+  background-image:linear-gradient(160deg,rgba(14,20,52,0.58),rgba(10,14,40,0.72)),var(--driver-photo);
+  background-size:220% 100%;
 }
+.driverCards.photoLoaded #driverPrimaryBtn{background-position:left center}
+.driverCards.photoLoaded #driverSecondaryBtn{background-position:right center}
 .driverCard.active{
   border-color:#ffd166;
   box-shadow:0 0 20px rgba(255,209,102,0.42),inset 0 0 18px rgba(255,210,120,0.22);
-  transform:translateY(-1px);
 }
-#launchSelectedBtn{margin-top:10px;width:100%}
-
-.nameRow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
-.nameRow label{display:grid;gap:6px;font-size:0.86rem;color:#d3e2ff}
-.nameRow input{
-  width:100%;border-radius:10px;border:1px solid rgba(255,255,255,0.2);padding:9px 10px;
-  background:rgba(8,12,30,0.7);color:#fff;font-weight:700;
-}
-#saveNamesBtn{margin-top:10px;width:100%}
-
-#carGrid{
-  margin-top:12px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;
-}
-.carCard{
-  border:1px solid rgba(255,255,255,0.24);border-radius:12px;padding:10px;background:rgba(20,30,74,0.8);
-  text-align:left;display:grid;gap:6px;position:relative;overflow:hidden;
-}
-.carCard.active{outline:2px solid #ffd166;box-shadow:0 0 18px rgba(255,209,102,0.4)}
-.carSwatch{height:20px;border-radius:999px;border:1px solid rgba(255,255,255,0.24)}
-.carCardTitle{font-size:0.95rem;font-weight:700}
-.carCardDesc{font-size:0.8rem;color:#d0deff;line-height:1.3}
 
 #hud{
   position:absolute;left:10px;right:10px;top:calc(62px + env(safe-area-inset-top));
-  border-radius:14px;padding:8px;
-  display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;
-  pointer-events:auto;
-  border-color:rgba(124,197,255,0.35);
-  box-shadow:0 0 24px rgba(70,160,255,0.33), inset 0 0 12px rgba(100,180,255,0.18);
+  border-radius:14px;padding:8px;display:flex;gap:8px;align-items:center;justify-content:space-between;flex-wrap:wrap;
+  pointer-events:auto;border-color:rgba(124,197,255,0.35);
+  box-shadow:0 0 24px rgba(70,160,255,0.33),inset 0 0 12px rgba(100,180,255,0.18);
   background:linear-gradient(145deg,rgba(12,19,52,0.78),rgba(10,14,40,0.84));
 }
 #hud span{
-  background:rgba(255,255,255,0.1);padding:6px 9px;border-radius:8px;font-size:0.88rem;font-weight:700;
-  border:1px solid rgba(255,255,255,0.15);
+  background:rgba(255,255,255,0.1);padding:6px 9px;border-radius:8px;
+  font-size:0.86rem;font-weight:700;border:1px solid rgba(255,255,255,0.15)
 }
-#hud span.flash{
-  animation:hudPulse 0.35s ease;
-}
+#hud span.flash{animation:hudPulse 0.35s ease}
 #hud span.critical{
-  color:#ffe7d1;
-  border-color:rgba(255,96,96,0.8);
-  background:rgba(120,20,20,0.4);
-  animation:hudAlert 0.6s ease infinite;
+  color:#ffe7d1;border-color:rgba(255,96,96,0.8);background:rgba(120,20,20,0.4);
+  animation:hudAlert 0.6s ease infinite
 }
 #hudFlash{
-  flex:1 1 100%;
-  text-align:center;
-  font-size:0.93rem;
-  color:#ffdf8d;
-  text-shadow:0 0 12px rgba(255,210,120,0.7);
-  animation:hudPulse 0.42s ease;
+  flex:1 1 100%;text-align:center;font-size:0.9rem;color:#ffdf8d;
+  text-shadow:0 0 12px rgba(255,210,120,0.7);animation:hudPulse 0.42s ease
 }
 
 #controls{
-  position:absolute;left:10px;right:10px;bottom:calc(88px + env(safe-area-inset-bottom));pointer-events:auto;
-  border-radius:16px;padding:8px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
+  position:absolute;left:10px;right:10px;bottom:calc(16px + env(safe-area-inset-bottom));
+  pointer-events:auto;border-radius:16px;padding:8px;display:grid;grid-template-columns:repeat(4,1fr);gap:8px;
 }
-.controlBtn{
-  min-height:54px;font-size:0.84rem;background:rgba(25,35,90,0.95);
-}
+.controlBtn{min-height:52px;font-size:0.84rem;background:rgba(25,35,90,0.95)}
 
 .hidden{display:none !important}
 
@@ -145,7 +115,6 @@ body{touch-action:none;-webkit-user-select:none;user-select:none;-webkit-touch-c
   50%{filter:brightness(1.25)}
 }
 
-@media (max-width:540px){
-  #carGrid{grid-template-columns:1fr}
+@media (max-width:560px){
   .driverCards{grid-template-columns:1fr}
 }

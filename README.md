@@ -6,7 +6,7 @@ Lightweight browser racing game for GitHub Pages with:
 - Two modes: Race Mode + Loco Mode
 - Star-heavy neon theme with modern scenery
 - Enemy fleet racers (no child names on opponents)
-- HUD systems: score, SRS, timer, fuel, combo, and event flashes
+- HUD systems: score, SRS, timer, fuel, damage, and event flashes
 - iPhone Safari-first controls and layout
 - Device tilt support (side-to-side steering, up/down speed)
 
@@ -32,4 +32,4 @@ Supported sample filenames in this MVP:
 - `photo.jpg`
 - `photo.png`
 
-The image is shown in the garage panel as inspiration for stylized in-game avatars.
+The image is split across the Axel/Jade driver cards for human-avatar style character select.

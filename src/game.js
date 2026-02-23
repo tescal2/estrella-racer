@@ -114,6 +114,18 @@ class SoundFX {
       });
     });
   }
+  towLaugh(){
+    this._play(c=>{
+      const t=c.currentTime;
+      const pitches=[300,380,300,420,300,380,340];
+      pitches.forEach((f,i)=>{
+        const o=c.createOscillator(),g=c.createGain();
+        o.type="triangle";o.frequency.value=f;
+        g.gain.setValueAtTime(.12,t+i*.12);g.gain.exponentialRampToValueAtTime(.01,t+i*.12+.1);
+        o.connect(g);g.connect(c.destination);o.start(t+i*.12);o.stop(t+i*.12+.12);
+      });
+    });
+  }
 }
 export const sfx = new SoundFX();
 /* Avatar drawing - detailed */
@@ -303,6 +315,43 @@ function buildCar(color, isPlayer, driverName){
       const fp = plate.clone();
       fp.position.set(0, 0.45, CAR_LEN/2+0.01);
       g.add(fp);
+    }
+    // Driver visible in the car
+    if(driverName){
+      const isJade = driverName.toLowerCase()==="jade";
+      const skinCol = isJade ? 0xc8956e : 0xb5845e;
+      const hairCol = isJade ? 0x1a1a1a : 0x2d1b0e;
+      const driverSkin = new THREE.MeshPhongMaterial({color:skinCol});
+      // Head
+      const dHead = new THREE.Mesh(new THREE.SphereGeometry(0.22,10,10), driverSkin);
+      dHead.position.set(0, 1.65, -0.1); dHead.name="driverHead"; g.add(dHead);
+      // Hair
+      const dHairMat = new THREE.MeshPhongMaterial({color:hairCol});
+      if(isJade){
+        // Long hair
+        const dHair = new THREE.Mesh(new THREE.SphereGeometry(0.24,8,8), dHairMat);
+        dHair.position.set(0, 1.7, -0.2); g.add(dHair);
+        const dHairFlow = new THREE.Mesh(new THREE.BoxGeometry(0.4,0.35,0.12), dHairMat);
+        dHairFlow.position.set(0, 1.4, -0.25); g.add(dHairFlow);
+      } else {
+        // Short hair
+        const dHair = new THREE.Mesh(new THREE.SphereGeometry(0.23,8,8), dHairMat);
+        dHair.position.set(0, 1.72, -0.15); dHair.scale.y=0.7; g.add(dHair);
+      }
+      // Eyes
+      const eyeW = new THREE.MeshPhongMaterial({color:0xffffff});
+      const eyeP = new THREE.MeshPhongMaterial({color:0x3e2723});
+      [-0.08, 0.08].forEach(x=>{
+        const ew = new THREE.Mesh(new THREE.SphereGeometry(0.05,6,6), eyeW);
+        ew.position.set(x, 1.68, 0.12); g.add(ew);
+        const ep = new THREE.Mesh(new THREE.SphereGeometry(0.025,4,4), eyeP);
+        ep.position.set(x, 1.68, 0.15); g.add(ep);
+      });
+      // Shoulders/torso (just visible above car body)
+      const shirtCol = isJade ? 0xe91e63 : 0x1565c0;
+      const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.22,0.35,6),
+        new THREE.MeshPhongMaterial({color:shirtCol}));
+      torso.position.set(0, 1.25, -0.1); g.add(torso);
     }
   }
   return g;
@@ -514,8 +563,8 @@ function buildRestaurant(){
   const sc=document.createElement("canvas");sc.width=128;sc.height=32;
   const sx=sc.getContext("2d");
   sx.fillStyle="#ffeb3b";sx.fillRect(0,0,128,32);
-  sx.fillStyle="#d32f2f";sx.font="bold 22px sans-serif";sx.textAlign="center";
-  sx.fillText("TACOS",64,24);
+  sx.fillStyle="#d32f2f";sx.font="bold 18px sans-serif";sx.textAlign="center";
+  sx.fillText("ZACATACOS",64,24);
   const signTex=new THREE.CanvasTexture(sc);
   const sign=new THREE.Mesh(new THREE.PlaneGeometry(2.5,0.6),new THREE.MeshBasicMaterial({map:signTex}));
   sign.position.set(0,4.3,2.01); g.add(sign);
@@ -592,7 +641,228 @@ function buildPark(){
   g.userData.type="park"; return g;
 }
 
-/* Sidewalk strip */
+function buildBirrieria(){
+  const g = new THREE.Group();
+  const bm = new THREE.MeshPhongMaterial({color:0x4e342e});
+  const bldg = new THREE.Mesh(new THREE.BoxGeometry(6,4,4),bm);
+  bldg.position.y=2; g.add(bldg);
+  // Awning - green
+  const aw = new THREE.Mesh(new THREE.BoxGeometry(6.5,0.15,1.5),
+    new THREE.MeshPhongMaterial({color:0x2e7d32}));
+  aw.position.set(0,3.2,2.5); aw.rotation.x=0.15; g.add(aw);
+  // Sign
+  const sc=document.createElement("canvas");sc.width=200;sc.height=32;
+  const sx=sc.getContext("2d");
+  sx.fillStyle="#fff3e0";sx.fillRect(0,0,200,32);
+  sx.fillStyle="#1b5e20";sx.font="bold 14px sans-serif";sx.textAlign="center";
+  sx.fillText("Birrieria Zaragoza",100,24);
+  const signTex=new THREE.CanvasTexture(sc);
+  const sign=new THREE.Mesh(new THREE.PlaneGeometry(3.2,0.6),new THREE.MeshBasicMaterial({map:signTex}));
+  sign.position.set(0,4.3,2.01); g.add(sign);
+  // Door
+  const door = new THREE.Mesh(new THREE.PlaneGeometry(1,2),new THREE.MeshPhongMaterial({color:0x3e2723}));
+  door.position.set(0,1,2.01); g.add(door);
+  // Windows
+  const wm = new THREE.MeshPhongMaterial({color:0xbbdefb,emissive:0x90caf9,emissiveIntensity:0.3});
+  [-1.8,1.8].forEach(x=>{
+    const win=new THREE.Mesh(new THREE.PlaneGeometry(0.8,0.8),wm);
+    win.position.set(x,2.5,2.01); g.add(win);
+  });
+  // Steam puff on roof
+  const steam=new THREE.Mesh(new THREE.SphereGeometry(0.5,6,6),
+    new THREE.MeshPhongMaterial({color:0xffffff,transparent:true,opacity:0.4}));
+  steam.position.set(1,4.6,0); g.add(steam);
+  g.userData.type="birrieria"; return g;
+}
+
+function buildPaletero(){
+  const g = new THREE.Group();
+  const skinMat = new THREE.MeshPhongMaterial({color:0xc8956e});
+  // Cart
+  const cart = new THREE.Mesh(new THREE.BoxGeometry(1.2,1,1.5),
+    new THREE.MeshPhongMaterial({color:0x1565c0}));
+  cart.position.set(0,0.6,0); g.add(cart);
+  // Umbrella
+  const umb = new THREE.Mesh(new THREE.ConeGeometry(1.2,0.4,8),
+    new THREE.MeshPhongMaterial({color:0xffeb3b}));
+  umb.position.set(0,2.5,0); g.add(umb);
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,1.8,6),
+    new THREE.MeshPhongMaterial({color:0x666666}));
+  pole.position.set(0,1.5,0); g.add(pole);
+  // Ice cream sign
+  const isc=document.createElement("canvas");isc.width=64;isc.height=24;
+  const ix=isc.getContext("2d");
+  ix.fillStyle="#e3f2fd";ix.fillRect(0,0,64,24);
+  ix.fillStyle="#1565c0";ix.font="bold 12px sans-serif";ix.textAlign="center";
+  ix.fillText("PALETAS",32,18);
+  const isTex=new THREE.CanvasTexture(isc);
+  const isSign=new THREE.Mesh(new THREE.PlaneGeometry(1,0.35),new THREE.MeshBasicMaterial({map:isTex}));
+  isSign.position.set(0,1.2,0.76); g.add(isSign);
+  // Cart wheels
+  const wMat = new THREE.MeshPhongMaterial({color:0x333333});
+  [-0.55,0.55].forEach(x=>{
+    const wh=new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.2,0.1,8),wMat);
+    wh.rotation.z=Math.PI/2; wh.position.set(x,0.2,0); g.add(wh);
+  });
+  // Person
+  const body=new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.22,0.8,6),
+    new THREE.MeshPhongMaterial({color:0xffffff}));
+  body.position.set(-1,0.7,0); g.add(body);
+  const head=new THREE.Mesh(new THREE.SphereGeometry(0.18,8,8),skinMat);
+  head.position.set(-1,1.3,0); g.add(head);
+  // Straw hat
+  const hat=new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.35,0.1,8),
+    new THREE.MeshPhongMaterial({color:0xf5deb3}));
+  hat.position.set(-1,1.5,0); g.add(hat);
+  g.userData.type="paletero"; return g;
+}
+
+function buildFishSeller(){
+  const g = new THREE.Group();
+  const skinMat = new THREE.MeshPhongMaterial({color:0xb5845e});
+  // Table
+  const table=new THREE.Mesh(new THREE.BoxGeometry(2.5,0.1,1.5),new THREE.MeshPhongMaterial({color:0x795548}));
+  table.position.set(0,0.8,0); g.add(table);
+  // Table legs
+  [[-1,0.4,-0.5],[-1,0.4,0.5],[1,0.4,-0.5],[1,0.4,0.5]].forEach(p=>{
+    const leg=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,0.8,6),new THREE.MeshPhongMaterial({color:0x5d4037}));
+    leg.position.set(p[0],p[1],p[2]); g.add(leg);
+  });
+  // Fish on table (silver elongated shapes)
+  const fishMat=new THREE.MeshPhongMaterial({color:0xb0bec5,shininess:60});
+  for(let i=0;i<4;i++){
+    const fish=new THREE.Mesh(new THREE.SphereGeometry(0.15,6,4),fishMat);
+    fish.scale.set(1,0.5,2);
+    fish.position.set(-0.6+i*0.45,0.95,0); g.add(fish);
+  }
+  // Man with mustache
+  const mBody=new THREE.Mesh(new THREE.CylinderGeometry(0.22,0.25,0.9,6),
+    new THREE.MeshPhongMaterial({color:0x37474f}));
+  mBody.position.set(0,0.45,-1); g.add(mBody);
+  const mHead=new THREE.Mesh(new THREE.SphereGeometry(0.2,8,8),skinMat);
+  mHead.position.set(0,1.15,-1); g.add(mHead);
+  // Long brown mustache
+  const musMat=new THREE.MeshPhongMaterial({color:0x4e342e});
+  [-0.1,0.1].forEach(x=>{
+    const mus=new THREE.Mesh(new THREE.BoxGeometry(0.18,0.04,0.06),musMat);
+    mus.position.set(x,1.08,-0.82); g.add(mus);
+  });
+  // Hat
+  const hat=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.18,0.15,8),
+    new THREE.MeshPhongMaterial({color:0xffffff}));
+  hat.position.set(0,1.35,-1); g.add(hat);
+  // Woman with long hair
+  const wBody=new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.22,0.8,6),
+    new THREE.MeshPhongMaterial({color:0xab47bc}));
+  wBody.position.set(1.5,0.4,-1); g.add(wBody);
+  const wHead=new THREE.Mesh(new THREE.SphereGeometry(0.18,8,8),
+    new THREE.MeshPhongMaterial({color:0xc8956e}));
+  wHead.position.set(1.5,1.05,-1); g.add(wHead);
+  // Long flowing hair
+  const hairMat=new THREE.MeshPhongMaterial({color:0x1a1a1a});
+  const hair=new THREE.Mesh(new THREE.BoxGeometry(0.35,0.7,0.15),hairMat);
+  hair.position.set(1.5,0.85,-1.1); g.add(hair);
+  const hairTip=new THREE.Mesh(new THREE.BoxGeometry(0.25,0.3,0.1),hairMat);
+  hairTip.position.set(1.5,0.4,-1.1); g.add(hairTip);
+  g.userData.type="fish"; return g;
+}
+
+function buildTamaleStand(){
+  const g = new THREE.Group();
+  // Small cart/stand
+  const cart=new THREE.Mesh(new THREE.BoxGeometry(1.5,1,1),new THREE.MeshPhongMaterial({color:0x8d6e63}));
+  cart.position.set(0,0.5,0); g.add(cart);
+  // Steam pot on top
+  const pot=new THREE.Mesh(new THREE.CylinderGeometry(0.35,0.4,0.5,8),
+    new THREE.MeshPhongMaterial({color:0x757575}));
+  pot.position.set(0,1.3,0); g.add(pot);
+  // Steam puffs
+  for(let i=0;i<3;i++){
+    const s=new THREE.Mesh(new THREE.SphereGeometry(0.15+i*0.05,6,6),
+      new THREE.MeshPhongMaterial({color:0xfafafa,transparent:true,opacity:0.35-i*0.08}));
+    s.position.set(Math.sin(i)*0.15, 1.7+i*0.3, Math.cos(i)*0.15); g.add(s);
+  }
+  // Sign
+  const sc=document.createElement("canvas");sc.width=96;sc.height=28;
+  const sx=sc.getContext("2d");
+  sx.fillStyle="#fff8e1";sx.fillRect(0,0,96,28);
+  sx.fillStyle="#e65100";sx.font="bold 14px sans-serif";sx.textAlign="center";
+  sx.fillText("TAMALES",48,20);
+  const sTex=new THREE.CanvasTexture(sc);
+  const sign=new THREE.Mesh(new THREE.PlaneGeometry(1.2,0.35),new THREE.MeshBasicMaterial({map:sTex}));
+  sign.position.set(0,1.1,0.51); g.add(sign);
+  // Vendor woman
+  const skinMat=new THREE.MeshPhongMaterial({color:0xc8956e});
+  const vBody=new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.25,0.8,6),
+    new THREE.MeshPhongMaterial({color:0xef5350}));
+  vBody.position.set(-1,0.4,0); g.add(vBody);
+  const vHead=new THREE.Mesh(new THREE.SphereGeometry(0.18,8,8),skinMat);
+  vHead.position.set(-1,1.05,0); g.add(vHead);
+  // Apron
+  const apron=new THREE.Mesh(new THREE.PlaneGeometry(0.4,0.5),
+    new THREE.MeshPhongMaterial({color:0xffffff,side:THREE.DoubleSide}));
+  apron.position.set(-1,0.35,0.13); g.add(apron);
+  g.userData.type="tamale"; return g;
+}
+
+function buildDancers(){
+  const g = new THREE.Group();
+  const dressColors=[0xe91e63,0xffeb3b,0x4caf50,0xff9800,0x9c27b0];
+  const skinMat=new THREE.MeshPhongMaterial({color:0xc8956e});
+  for(let i=0;i<4;i++){
+    const dx=-2+i*1.5, dz=Math.sin(i)*0.5;
+    // Body (dress)
+    const dress=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.4,0.9,8),
+      new THREE.MeshPhongMaterial({color:dressColors[i%5]}));
+    dress.position.set(dx,0.45,dz); g.add(dress);
+    // Head
+    const head=new THREE.Mesh(new THREE.SphereGeometry(0.16,8,8),skinMat);
+    head.position.set(dx,1.1,dz); g.add(head);
+    // Arms out (dancing)
+    const armMat=new THREE.MeshPhongMaterial({color:dressColors[i%5]});
+    const ang=i*0.5;
+    [-0.3,0.3].forEach(side=>{
+      const arm=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,0.5,4),armMat);
+      arm.position.set(dx+side*1.2,0.9,dz);
+      arm.rotation.z=side>0?-0.8:0.8;
+      g.add(arm);
+    });
+  }
+  // Music notes (floating)
+  const noteMat=new THREE.MeshPhongMaterial({color:0xffeb3b,emissive:0xffeb3b,emissiveIntensity:0.3});
+  for(let i=0;i<3;i++){
+    const note=new THREE.Mesh(new THREE.SphereGeometry(0.08,4,4),noteMat);
+    note.position.set(-1+i*1.5, 1.8+i*0.2, Math.sin(i)*0.3);
+    g.add(note);
+  }
+  g.userData.type="dancers"; return g;
+}
+
+const STREET_NAMES=["Pulaski","Cicero","Ashland","Belmont","Division"];
+let _streetIdx=0;
+function buildStreetSign(){
+  const g = new THREE.Group();
+  // Pole
+  const pole=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.06,3.5,6),
+    new THREE.MeshPhongMaterial({color:0x616161}));
+  pole.position.set(0,1.75,0); g.add(pole);
+  // Sign plate
+  const name=STREET_NAMES[_streetIdx%STREET_NAMES.length];
+  _streetIdx++;
+  const sc=document.createElement("canvas");sc.width=128;sc.height=32;
+  const sx=sc.getContext("2d");
+  sx.fillStyle="#1b5e20";sx.fillRect(0,0,128,32);
+  sx.fillStyle="#ffffff";sx.font="bold 14px sans-serif";sx.textAlign="center";
+  sx.fillText(name+" St",64,22);
+  const sTex=new THREE.CanvasTexture(sc);
+  const sign=new THREE.Mesh(new THREE.BoxGeometry(1.8,0.4,0.06),new THREE.MeshBasicMaterial({map:sTex}));
+  sign.position.set(0,3.4,0); g.add(sign);
+  // Back side
+  const back=new THREE.Mesh(new THREE.BoxGeometry(1.8,0.4,0.06),
+    new THREE.MeshPhongMaterial({color:0x1b5e20}));
+  back.position.set(0,3.4,-0.04); g.add(back);
+  g.userData.type="sign"; return g;
+}
 function buildSidewalk(){
   const geo = new THREE.PlaneGeometry(3, ROAD_LEN + ROAD_BEHIND);
   const mat = new THREE.MeshPhongMaterial({color:0x9e9e9e});
@@ -675,6 +945,14 @@ function buildSilhouetteSprite(who){
   ctx.moveTo(cx-50,384);ctx.quadraticCurveTo(cx-50,cy+52,cx-12,cy+52);
   ctx.lineTo(cx+12,cy+52);ctx.quadraticCurveTo(cx+50,cy+52,cx+50,384);
   ctx.closePath();ctx.fill();
+  // Driver name glowing below silhouette
+  const name=who==="jade"?"JADE":"AXEL";
+  ctx.font="bold 36px sans-serif";ctx.textAlign="center";
+  ctx.fillStyle=who==="jade"?"rgba(233,30,99,0.5)":"rgba(21,101,192,0.5)";
+  ctx.shadowColor=who==="jade"?"#e91e63":"#1565c0";
+  ctx.shadowBlur=15;
+  ctx.fillText(name,128,280);
+  ctx.shadowBlur=0;
   const tex=new THREE.CanvasTexture(cnv);
   const mat=new THREE.SpriteMaterial({map:tex,transparent:true});
   const spr=new THREE.Sprite(mat);
@@ -835,7 +1113,9 @@ export class EstrellaGame {
   }
 
   _spawnScenery(z){
-    const builders=[buildRestaurant, buildFleaMarket, buildPark];
+    const builders=[buildRestaurant, buildBirrieria, buildFleaMarket, buildPark,
+      buildPaletero, buildFishSeller, buildTamaleStand, buildDancers];
+    this._sceneryCount = (this._sceneryCount||0)+1;
     const makeOne=(side)=>{
       const b=builders[Math.floor(Math.random()*builders.length)]();
       const x=side*(ROAD_W/2+6+Math.random()*3);
@@ -846,6 +1126,15 @@ export class EstrellaGame {
     };
     this.sceneryLeft.push(makeOne(-1));
     this.sceneryRight.push(makeOne(1));
+    // Every 3rd spawn, add a street sign on one side
+    if(this._sceneryCount%3===0){
+      const sign=buildStreetSign();
+      const side=Math.random()>0.5?1:-1;
+      sign.position.set(side*(ROAD_W/2+2), 0, z+5);
+      this.scene.add(sign);
+      if(side<0) this.sceneryLeft.push(sign);
+      else this.sceneryRight.push(sign);
+    }
   }
 
   _updateScenery(effectiveSpeed, dt){
@@ -1167,7 +1456,7 @@ export class EstrellaGame {
     this.towTruck=buildTowTruck();
     this.towTruck.position.set(this._crashSavedX, 0, this.playerCar.position.z+35);
     this.scene.add(this.towTruck);
-    sfx.towHorn();
+    sfx.towHorn();sfx.towLaugh();
     if(this.onCrash)this.onCrash(this.lives);
   }
 

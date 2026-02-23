@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0e1026">
+<meta name="theme-color" content="#0a0e2a">
 <title>Estrella Racer</title>
 <link rel="stylesheet" href="./styles.css">
 </head>
@@ -14,71 +14,100 @@
   <canvas id="gameCanvas" aria-label="Estrella Racer game"></canvas>
 
   <div id="overlay">
-    <header id="topBar" class="glass">
-      <button id="languageBtn" class="chip"></button>
-      <button id="tiltBtn" class="chip"></button>
-      <button id="audioBtn" class="chip"></button>
-      <button id="garageBtn" class="chip"></button>
+    <header id="topBar">
+      <button id="languageBtn" class="iconBtn"></button>
+      <button id="tiltBtn" class="iconBtn"></button>
+      <button id="audioBtn" class="iconBtn"></button>
     </header>
 
-    <section id="menuPanel" class="panel glass">
-      <h1 id="gameTitle"></h1>
-      <p id="gameSubtitle"></p>
-      <p id="quickHint" class="hint"></p>
-      <div class="stack">
-        <button id="startRaceBtn" class="action"></button>
-        <button id="startLocoBtn" class="action"></button>
+    <section id="menuPanel" class="panel">
+      <div class="logoWrap">
+        <span class="logoStar">⭐</span>
+        <h1 id="gameTitle"></h1>
+        <span class="logoStar">⭐</span>
+      </div>
+      <button id="playBtn" class="bigPlay"></button>
+    </section>
+
+    <section id="driverPanel" class="panel hidden">
+      <h2 id="driverTitle"></h2>
+      <div class="driverGrid">
+        <button id="driverAxelBtn" class="driverCard active">
+          <canvas id="avatarAxel" class="avatarCanvas" width="140" height="140"></canvas>
+          <span class="driverLabel" id="labelAxel"></span>
+        </button>
+        <button id="driverJadeBtn" class="driverCard">
+          <canvas id="avatarJade" class="avatarCanvas" width="140" height="140"></canvas>
+          <span class="driverLabel" id="labelJade"></span>
+        </button>
+      </div>
+      <button id="nextDiffBtn" class="actionBtn"></button>
+      <button id="backMenuBtn2" class="backBtn"></button>
+    </section>
+
+    <section id="diffPanel" class="panel hidden">
+      <h2 id="diffTitle"></h2>
+      <div class="diffGrid">
+        <button id="diffEasyBtn" class="diffCard active" data-diff="easy">
+          <span class="diffIcon">🟢</span><span id="diffEasyLabel"></span>
+        </button>
+        <button id="diffMedBtn" class="diffCard" data-diff="medium">
+          <span class="diffIcon">🟡</span><span id="diffMedLabel"></span>
+        </button>
+        <button id="diffHardBtn" class="diffCard" data-diff="hard">
+          <span class="diffIcon">🔴</span><span id="diffHardLabel"></span>
+        </button>
+      </div>
+      <button id="nextModeBtn" class="actionBtn"></button>
+      <button id="backDriverBtn" class="backBtn"></button>
+    </section>
+
+    <section id="modePanel" class="panel hidden">
+      <h2 id="modeSelectTitle"></h2>
+      <div class="modeGrid">
+        <button id="modeRaceBtn" class="modeCard">
+          <span class="modeIcon">🏁</span><span id="modeRaceLabel"></span>
+        </button>
+        <button id="modeLocoBtn" class="modeCard">
+          <span class="modeIcon">💥</span><span id="modeLocoLabel"></span>
+        </button>
+      </div>
+      <button id="backDiffBtn" class="backBtn"></button>
+    </section>
+
+    <section id="hud" class="hidden">
+      <div id="hudRow">
+        <span id="hudLives"></span>
+        <span id="hudScore"></span>
+        <span id="hudFuel"></span>
+      </div>
+      <div id="progressWrap">
+        <div id="progressBar"></div>
+        <span id="progressLabel"></span>
+      </div>
+      <div id="hudFlash" class="hidden"></div>
+      <div id="hudBtns">
+        <button id="pauseBtn" class="iconBtn"></button>
+        <button id="exitBtn" class="iconBtn">🏠</button>
       </div>
     </section>
 
-    <section id="carPanel" class="panel glass hidden">
-      <h2 id="driverSelectTitle"></h2>
-      <div id="avatarFrame" class="glass">
-        <img id="avatarPreview" alt="Driver reference" class="hidden">
-        <p id="avatarHint"></p>
-      </div>
-
-      <div id="driverCards" class="driverCards">
-        <button id="driverPrimaryBtn" class="driverCard"></button>
-        <button id="driverSecondaryBtn" class="driverCard"></button>
-      </div>
-
-      <div class="stack">
-        <button id="launchSelectedBtn" class="action"></button>
-        <button id="closeGarageBtn" class="chip"></button>
-      </div>
+    <section id="controls" class="hidden">
+      <button class="ctrlBtn" id="ctrlLeft">◀</button>
+      <button class="ctrlBtn" id="ctrlUp">▲</button>
+      <button class="ctrlBtn" id="ctrlDown">▼</button>
+      <button class="ctrlBtn" id="ctrlRight">▶</button>
     </section>
 
-    <section id="resultPanel" class="panel glass hidden">
+    <section id="resultPanel" class="panel hidden">
       <h2 id="resultTitle"></h2>
-      <p id="resultMessage"></p>
-      <div class="stack">
-        <button id="restartBtn" class="action"></button>
-        <button id="backMenuBtn" class="chip"></button>
-      </div>
-    </section>
-
-    <section id="hud" class="glass hidden">
-      <span id="hudMode"></span>
-      <span id="hudTimer"></span>
-      <span id="hudFuel"></span>
-      <span id="hudDamage"></span>
-      <span id="hudScore"></span>
-      <span id="hudSrs"></span>
-      <span id="hudFlash" class="hidden"></span>
-      <button id="pauseBtn" class="chip"></button>
-      <button id="exitBtn" class="chip"></button>
-    </section>
-
-    <section id="controls" class="glass hidden">
-      <button class="controlBtn" data-control="left" id="controlLeft"></button>
-      <button class="controlBtn" data-control="up" id="controlUp"></button>
-      <button class="controlBtn" data-control="down" id="controlDown"></button>
-      <button class="controlBtn" data-control="right" id="controlRight"></button>
+      <p id="resultMsg"></p>
+      <p id="resultScore"></p>
+      <button id="retryBtn" class="actionBtn"></button>
+      <button id="backMenuBtn" class="backBtn"></button>
     </section>
   </div>
 </div>
-
 <script type="module" src="./src/main.js"></script>
 </body>
 </html>

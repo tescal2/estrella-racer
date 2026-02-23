@@ -1,491 +1,325 @@
-import { EstrellaGame } from "./game.js";
-import { STORAGE_LANGUAGE_KEY, getLanguageButtonText, t } from "./i18n.js";
+import { EstrellaGame, drawAvatar } from "./game.js";
+import { STORAGE_LANGUAGE_KEY, t, getLanguageButtonText } from "./i18n.js";
 import { loadProfile } from "./personalization.js";
-import { byId, setText, setVisible, setupHoldButton } from "./ui.js";
+import { byId, setVisible, setText, setupHoldButton } from "./ui.js";
 
 const STORAGE_DRIVER_KEY = "estrella-racer-driver";
 const STORAGE_MUTE_KEY = "estrella-racer-muted";
 const STORAGE_TILT_KEY = "estrella-racer-tilt";
-const AVATAR_CANDIDATES = [
-  "assets/reference/axel-jade/IMG_6923.heic",
-  "assets/reference/axel-jade/IMG_6923.jpg",
-  "assets/reference/axel-jade/IMG_6923.jpeg",
-  "assets/reference/axel-jade/IMG_6923.png",
-  "assets/reference/axel-jade/Axel-Jade.heic",
-  "assets/reference/axel-jade/axel-jade.heic",
-  "assets/reference/axel-jade/side-by-side.jpg",
-  "assets/reference/axel-jade/side-by-side.jpeg",
-  "assets/reference/axel-jade/side-by-side.png",
-  "assets/reference/axel-jade/photo.jpg",
-  "assets/reference/axel-jade/photo.jpeg",
-  "assets/reference/axel-jade/photo.png"
-];
+const TILT_SUPPORTED = typeof window.DeviceOrientationEvent !== "undefined";
+const TILT_NEEDS_PERM = TILT_SUPPORTED && typeof window.DeviceOrientationEvent.requestPermission === "function";
 
-const DEVICE_ORIENTATION_SUPPORTED = typeof window.DeviceOrientationEvent !== "undefined";
-const DEVICE_ORIENTATION_NEEDS_PERMISSION = DEVICE_ORIENTATION_SUPPORTED && typeof window.DeviceOrientationEvent.requestPermission === "function";
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
 
-function clamp(value, min, max) {
-  return Math.max(min, Math.min(max, value));
-}
-
-function formatTimer(seconds) {
-  const safe = Math.max(0, Math.floor(seconds));
-  const mins = Math.floor(safe / 60).toString().padStart(2, "0");
-  const secs = (safe % 60).toString().padStart(2, "0");
-  return `${mins}:${secs}`;
-}
-
-const elements = {
+const el = {
   canvas: byId("gameCanvas"),
   languageBtn: byId("languageBtn"),
   tiltBtn: byId("tiltBtn"),
   audioBtn: byId("audioBtn"),
-  garageBtn: byId("garageBtn"),
   menuPanel: byId("menuPanel"),
-  carPanel: byId("carPanel"),
-  resultPanel: byId("resultPanel"),
-  hud: byId("hud"),
-  controls: byId("controls"),
   gameTitle: byId("gameTitle"),
-  gameSubtitle: byId("gameSubtitle"),
-  quickHint: byId("quickHint"),
-  startRaceBtn: byId("startRaceBtn"),
-  startLocoBtn: byId("startLocoBtn"),
-  driverSelectTitle: byId("driverSelectTitle"),
-  avatarPreview: byId("avatarPreview"),
-  avatarHint: byId("avatarHint"),
-  driverCards: byId("driverCards"),
-  driverPrimaryBtn: byId("driverPrimaryBtn"),
-  driverSecondaryBtn: byId("driverSecondaryBtn"),
-  launchSelectedBtn: byId("launchSelectedBtn"),
-  closeGarageBtn: byId("closeGarageBtn"),
-  resultTitle: byId("resultTitle"),
-  resultMessage: byId("resultMessage"),
-  restartBtn: byId("restartBtn"),
-  backMenuBtn: byId("backMenuBtn"),
-  hudMode: byId("hudMode"),
-  hudTimer: byId("hudTimer"),
-  hudFuel: byId("hudFuel"),
-  hudDamage: byId("hudDamage"),
+  playBtn: byId("playBtn"),
+  driverPanel: byId("driverPanel"),
+  driverTitle: byId("driverTitle"),
+  driverAxelBtn: byId("driverAxelBtn"),
+  driverJadeBtn: byId("driverJadeBtn"),
+  labelAxel: byId("labelAxel"),
+  labelJade: byId("labelJade"),
+  avatarAxel: byId("avatarAxel"),
+  avatarJade: byId("avatarJade"),
+  nextDiffBtn: byId("nextDiffBtn"),
+  backMenuBtn2: byId("backMenuBtn2"),
+  diffPanel: byId("diffPanel"),
+  diffTitle: byId("diffTitle"),
+  diffEasyBtn: byId("diffEasyBtn"),
+  diffMedBtn: byId("diffMedBtn"),
+  diffHardBtn: byId("diffHardBtn"),
+  diffEasyLabel: byId("diffEasyLabel"),
+  diffMedLabel: byId("diffMedLabel"),
+  diffHardLabel: byId("diffHardLabel"),
+  nextModeBtn: byId("nextModeBtn"),
+  backDriverBtn: byId("backDriverBtn"),
+  modePanel: byId("modePanel"),
+  modeSelectTitle: byId("modeSelectTitle"),
+  modeRaceBtn: byId("modeRaceBtn"),
+  modeLocoBtn: byId("modeLocoBtn"),
+  modeRaceLabel: byId("modeRaceLabel"),
+  modeLocoLabel: byId("modeLocoLabel"),
+  backDiffBtn: byId("backDiffBtn"),
+  hud: byId("hud"),
+  hudLives: byId("hudLives"),
   hudScore: byId("hudScore"),
-  hudSrs: byId("hudSrs"),
+  hudFuel: byId("hudFuel"),
+  progressBar: byId("progressBar"),
+  progressLabel: byId("progressLabel"),
   hudFlash: byId("hudFlash"),
   pauseBtn: byId("pauseBtn"),
   exitBtn: byId("exitBtn"),
-  controlLeft: byId("controlLeft"),
-  controlUp: byId("controlUp"),
-  controlDown: byId("controlDown"),
-  controlRight: byId("controlRight")
+  controls: byId("controls"),
+  ctrlLeft: byId("ctrlLeft"),
+  ctrlUp: byId("ctrlUp"),
+  ctrlDown: byId("ctrlDown"),
+  ctrlRight: byId("ctrlRight"),
+  resultPanel: byId("resultPanel"),
+  resultTitle: byId("resultTitle"),
+  resultMsg: byId("resultMsg"),
+  resultScore: byId("resultScore"),
+  retryBtn: byId("retryBtn"),
+  backMenuBtn: byId("backMenuBtn")
 };
 
-const game = new EstrellaGame(elements.canvas);
-let language = localStorage.getItem(STORAGE_LANGUAGE_KEY) === "es" ? "es" : "en";
+const game = new EstrellaGame(el.canvas);
+let lang = localStorage.getItem(STORAGE_LANGUAGE_KEY) === "es" ? "es" : "en";
 const profile = loadProfile();
-let selectedDriverKey = localStorage.getItem(STORAGE_DRIVER_KEY) === "secondary" ? "secondary" : "primary";
+let driverKey = localStorage.getItem(STORAGE_DRIVER_KEY) === "secondary" ? "secondary" : "primary";
+let difficulty = "medium";
 let resultShown = false;
-let pendingMode = "race";
+let lastMode = "race";
 
-const tiltState = {
-  supported: DEVICE_ORIENTATION_SUPPORTED,
-  needsPermission: DEVICE_ORIENTATION_NEEDS_PERMISSION,
+const tilt = {
+  supported: TILT_SUPPORTED,
+  needsPerm: TILT_NEEDS_PERM,
   wanted: localStorage.getItem(STORAGE_TILT_KEY) !== "0",
   enabled: false,
-  permissionGranted: !DEVICE_ORIENTATION_NEEDS_PERMISSION
+  granted: !TILT_NEEDS_PERM
 };
-if (tiltState.supported && !tiltState.needsPermission && tiltState.wanted) {
-  tiltState.enabled = true;
-}
+if (tilt.supported && !tilt.needsPerm && tilt.wanted) tilt.enabled = true;
 
-game.setLanguage(language);
+game.setLanguage(lang);
 game.setProfile(profile);
-game.setDriverKey(selectedDriverKey);
+game.setDriverKey(driverKey);
 game.setMuted(localStorage.getItem(STORAGE_MUTE_KEY) === "1");
 
-function isInPlayState() {
-  const state = game.getRunState();
-  return state === "playing" || state === "paused";
-}
-
-function getSelectedDriverName() {
-  return selectedDriverKey === "secondary" ? profile.secondaryName : profile.primaryName;
-}
-
-function syncControlsVisibility() {
-  const active = game.getRunState() === "playing" || game.getRunState() === "paused";
-  setVisible(elements.controls, active);
-}
-
-function refreshDriverButtons() {
-  setText(elements.driverPrimaryBtn, t(language, "driverPrimary", { name: profile.primaryName }));
-  setText(elements.driverSecondaryBtn, t(language, "driverSecondary", { name: profile.secondaryName }));
-  elements.driverPrimaryBtn.classList.toggle("active", selectedDriverKey === "primary");
-  elements.driverSecondaryBtn.classList.toggle("active", selectedDriverKey === "secondary");
-}
-
-function refreshLaunchButton() {
-  const name = getSelectedDriverName();
-  setText(elements.launchSelectedBtn, pendingMode === "loco" ? t(language, "launchLocoAs", { name }) : t(language, "launchRaceAs", { name }));
-}
-
-function refreshTiltButtonText() {
-  if (!tiltState.supported) {
-    setText(elements.tiltBtn, t(language, "tiltUnavailable"));
-    return;
+function drawAvatarCanvases() {
+  for (const [canvasEl, isAxel] of [[el.avatarAxel, true], [el.avatarJade, false]]) {
+    const ctx = canvasEl.getContext("2d");
+    const dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvasEl.width = 140 * dpr;
+    canvasEl.height = 140 * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.clearRect(0, 0, 140, 140);
+    drawAvatar(ctx, 70, 70, 130, isAxel);
   }
-  setText(elements.tiltBtn, tiltState.enabled ? t(language, "tiltOn") : t(language, "tiltOff"));
 }
 
-function refreshHud() {
-  const snapshot = game.getSnapshot();
-  setText(elements.hudMode, snapshot.mode === "race" ? t(language, "modeRace") : t(language, "modeLoco"));
-  setText(elements.hudTimer, `⏱ ${formatTimer(snapshot.timer)}`);
-  setText(elements.hudFuel, `⛽ ${snapshot.fuel}%`);
-  setText(elements.hudDamage, `🛠 ${snapshot.damage}%`);
-  setText(elements.hudScore, `${t(language, "score")} ${snapshot.score}`);
-  setText(elements.hudSrs, `${t(language, "srs")} ${snapshot.srs}`);
-
-  elements.hudScore.classList.toggle("flash", snapshot.scorePulse);
-  elements.hudSrs.classList.toggle("flash", snapshot.srsPulse);
-  elements.hudFuel.classList.toggle("critical", snapshot.fuel <= 20);
-  elements.hudDamage.classList.toggle("critical", snapshot.damage >= 70);
-
-  if (snapshot.flashEventKey) {
-    setText(elements.hudFlash, t(language, snapshot.flashEventKey));
-    setVisible(elements.hudFlash, true);
-  } else {
-    setVisible(elements.hudFlash, false);
+function hideAllPanels() {
+  for (const p of [el.menuPanel, el.driverPanel, el.diffPanel, el.modePanel, el.resultPanel, el.hud, el.controls]) {
+    setVisible(p, false);
   }
-  setText(elements.pauseBtn, game.getRunState() === "paused" ? t(language, "resume") : t(language, "pause"));
-}
-
-function refreshTexts() {
-  setText(elements.gameTitle, t(language, "title"));
-  setText(elements.gameSubtitle, t(language, "subtitle"));
-  setText(elements.quickHint, t(language, "quickHint"));
-  setText(elements.startRaceBtn, t(language, "startRace"));
-  setText(elements.startLocoBtn, t(language, "startLoco"));
-  setText(elements.languageBtn, getLanguageButtonText(language));
-  refreshTiltButtonText();
-  setText(elements.audioBtn, game.muted ? t(language, "musicOff") : t(language, "musicOn"));
-  setText(elements.garageBtn, t(language, "openSelect"));
-  setText(elements.driverSelectTitle, t(language, "selectDriver"));
-  setText(elements.closeGarageBtn, t(language, "closeSelect"));
-  setText(elements.restartBtn, t(language, "restart"));
-  setText(elements.backMenuBtn, t(language, "menu"));
-  setText(elements.exitBtn, t(language, "menu"));
-  setText(elements.controlLeft, t(language, "controlLeft"));
-  setText(elements.controlUp, t(language, "controlUp"));
-  setText(elements.controlDown, t(language, "controlDown"));
-  setText(elements.controlRight, t(language, "controlRight"));
-  refreshDriverButtons();
-  refreshLaunchButton();
-  refreshHud();
-}
-
-function applyDriver(driverKey) {
-  selectedDriverKey = driverKey === "secondary" ? "secondary" : "primary";
-  localStorage.setItem(STORAGE_DRIVER_KEY, selectedDriverKey);
-  game.setDriverKey(selectedDriverKey);
-  refreshDriverButtons();
-  refreshLaunchButton();
-  refreshHud();
-}
-
-function loadAvatarPreview() {
-  const cacheBuster = `?v=${Date.now()}`;
-  let index = 0;
-
-  const clearPhotoState = () => {
-    elements.driverCards.classList.remove("photoLoaded");
-    elements.driverCards.style.removeProperty("--driver-photo");
-    elements.avatarPreview.classList.add("hidden");
-    elements.avatarPreview.removeAttribute("src");
-  };
-
-  const tryNext = () => {
-    if (index >= AVATAR_CANDIDATES.length) {
-      clearPhotoState();
-      setText(elements.avatarHint, t(language, "photoHintMissing"));
-      return;
-    }
-    const candidate = `${AVATAR_CANDIDATES[index]}${cacheBuster}`;
-    index += 1;
-    const probe = new Image();
-    probe.onload = () => {
-      elements.avatarPreview.src = candidate;
-      elements.avatarPreview.classList.remove("hidden");
-      elements.driverCards.classList.add("photoLoaded");
-      elements.driverCards.style.setProperty("--driver-photo", `url("${candidate}")`);
-      setText(elements.avatarHint, t(language, "photoHintLoaded"));
-    };
-    probe.onerror = tryNext;
-    probe.src = candidate;
-  };
-
-  tryNext();
 }
 
 function showMenu() {
   game.stopToMenu();
   resultShown = false;
-  setVisible(elements.menuPanel, true);
-  setVisible(elements.carPanel, false);
-  setVisible(elements.resultPanel, false);
-  setVisible(elements.hud, false);
-  setVisible(elements.controls, false);
+  hideAllPanels();
+  setVisible(el.menuPanel, true);
 }
 
-function openDriverSelect(mode) {
-  if (isInPlayState()) {
-    return;
-  }
-  pendingMode = mode || "race";
-  setVisible(elements.menuPanel, false);
-  setVisible(elements.resultPanel, false);
-  setVisible(elements.carPanel, true);
-  refreshLaunchButton();
-  loadAvatarPreview();
+function showDriverSelect() {
+  hideAllPanels();
+  setVisible(el.driverPanel, true);
+  drawAvatarCanvases();
+  refreshDriverCards();
 }
 
-async function ensureTiltPermission() {
-  if (!tiltState.supported || !tiltState.wanted) {
-    tiltState.enabled = false;
-    game.clearTiltInput();
-    return false;
+function showDiffSelect() {
+  hideAllPanels();
+  setVisible(el.diffPanel, true);
+  refreshDiffCards();
+}
+
+function showModeSelect() {
+  hideAllPanels();
+  setVisible(el.modePanel, true);
+}
+
+function refreshDriverCards() {
+  el.driverAxelBtn.classList.toggle("active", driverKey === "primary");
+  el.driverJadeBtn.classList.toggle("active", driverKey === "secondary");
+}
+
+function refreshDiffCards() {
+  el.diffEasyBtn.classList.toggle("active", difficulty === "easy");
+  el.diffMedBtn.classList.toggle("active", difficulty === "medium");
+  el.diffHardBtn.classList.toggle("active", difficulty === "hard");
+}
+
+function refreshHud() {
+  const snap = game.getSnapshot();
+  let hearts = "";
+  for (let i = 0; i < snap.maxLives; i++) hearts += i < snap.lives ? "\u2764\uFE0F" : "\u{1F5A4}";
+  setText(el.hudLives, hearts);
+  setText(el.hudScore, t(lang, "score") + " " + snap.score);
+  setText(el.hudFuel, "\u26FD " + snap.fuel + "%");
+  el.hudFuel.style.color = snap.fuel <= 20 ? "#ff4444" : "#7df";
+  el.progressBar.style.width = Math.round(snap.progress * 100) + "%";
+  setText(el.progressLabel, t(lang, "progress", { pct: Math.round(snap.progress * 100) }));
+  if (snap.flashKey) {
+    setText(el.hudFlash, t(lang, snap.flashKey));
+    setVisible(el.hudFlash, true);
+  } else {
+    setVisible(el.hudFlash, false);
   }
-  if (!tiltState.needsPermission) {
-    tiltState.enabled = true;
-    return true;
-  }
-  if (tiltState.permissionGranted) {
-    tiltState.enabled = true;
-    return true;
-  }
+  setText(el.pauseBtn, snap.paused ? t(lang, "resume") : t(lang, "pause"));
+}
+
+function refreshTexts() {
+  setText(el.gameTitle, t(lang, "title"));
+  setText(el.playBtn, t(lang, "play"));
+  setText(el.languageBtn, getLanguageButtonText(lang));
+  setText(el.tiltBtn, tilt.supported ? (tilt.enabled ? t(lang, "tiltOn") : t(lang, "tiltOff")) : "\u274C");
+  setText(el.audioBtn, game.muted ? t(lang, "musicOff") : t(lang, "musicOn"));
+  setText(el.driverTitle, t(lang, "chooseDriver"));
+  setText(el.labelAxel, profile.primaryName);
+  setText(el.labelJade, profile.secondaryName);
+  setText(el.nextDiffBtn, t(lang, "next"));
+  setText(el.backMenuBtn2, t(lang, "back"));
+  setText(el.diffTitle, t(lang, "chooseDiff"));
+  setText(el.diffEasyLabel, t(lang, "easy"));
+  setText(el.diffMedLabel, t(lang, "medium"));
+  setText(el.diffHardLabel, t(lang, "hard"));
+  setText(el.nextModeBtn, t(lang, "next"));
+  setText(el.backDriverBtn, t(lang, "back"));
+  setText(el.modeSelectTitle, t(lang, "chooseMode"));
+  setText(el.modeRaceLabel, t(lang, "race"));
+  setText(el.modeLocoLabel, t(lang, "loco"));
+  setText(el.backDiffBtn, t(lang, "back"));
+  setText(el.retryBtn, t(lang, "retry"));
+  setText(el.backMenuBtn, t(lang, "menu"));
+}
+
+async function ensureTilt() {
+  if (!tilt.supported || !tilt.wanted) { tilt.enabled = false; game.clearTiltInput(); return false; }
+  if (!tilt.needsPerm) { tilt.enabled = true; return true; }
+  if (tilt.granted) { tilt.enabled = true; return true; }
   try {
-    const result = await window.DeviceOrientationEvent.requestPermission();
-    tiltState.permissionGranted = result === "granted";
-    tiltState.enabled = tiltState.permissionGranted;
-    if (!tiltState.enabled) {
-      tiltState.wanted = false;
-      localStorage.setItem(STORAGE_TILT_KEY, "0");
-      game.clearTiltInput();
-    }
-  } catch {
-    tiltState.enabled = false;
-    tiltState.wanted = false;
-    localStorage.setItem(STORAGE_TILT_KEY, "0");
-    game.clearTiltInput();
-  }
-  return tiltState.enabled;
+    const res = await window.DeviceOrientationEvent.requestPermission();
+    tilt.granted = res === "granted"; tilt.enabled = tilt.granted;
+    if (!tilt.enabled) { tilt.wanted = false; localStorage.setItem(STORAGE_TILT_KEY, "0"); game.clearTiltInput(); }
+  } catch { tilt.enabled = false; tilt.wanted = false; localStorage.setItem(STORAGE_TILT_KEY, "0"); game.clearTiltInput(); }
+  return tilt.enabled;
 }
 
-async function startMode(mode) {
+async function startGame(mode) {
   game.unlockAudio();
-  if (tiltState.wanted) {
-    await ensureTiltPermission();
-  }
-  game.setDriverKey(selectedDriverKey);
+  if (tilt.wanted) await ensureTilt();
+  game.setDriverKey(driverKey);
+  game.setDifficulty(difficulty);
   game.start(mode);
+  lastMode = mode;
   resultShown = false;
-  setVisible(elements.menuPanel, false);
-  setVisible(elements.carPanel, false);
-  setVisible(elements.resultPanel, false);
-  setVisible(elements.hud, true);
-  syncControlsVisibility();
+  hideAllPanels();
+  setVisible(el.hud, true);
+  setVisible(el.controls, true);
   refreshHud();
 }
 
 function showResult() {
-  const result = game.getResult();
-  setText(elements.resultTitle, t(language, result.titleKey));
-  setText(elements.resultMessage, t(language, result.messageKey));
-  setVisible(elements.resultPanel, true);
-  setVisible(elements.hud, false);
-  setVisible(elements.controls, false);
+  const res = game.getResult();
+  setText(el.resultTitle, t(lang, res.titleKey));
+  setText(el.resultMsg, t(lang, res.msgKey));
+  setText(el.resultScore, t(lang, "finalScore", { score: res.score }));
+  hideAllPanels();
+  setVisible(el.resultPanel, true);
 }
 
-function toggleLanguage() {
-  language = language === "en" ? "es" : "en";
-  localStorage.setItem(STORAGE_LANGUAGE_KEY, language);
-  game.setLanguage(language);
+// Event listeners
+el.playBtn.addEventListener("click", () => { game.unlockAudio(); showDriverSelect(); });
+el.driverAxelBtn.addEventListener("click", () => { driverKey = "primary"; localStorage.setItem(STORAGE_DRIVER_KEY, "primary"); refreshDriverCards(); });
+el.driverJadeBtn.addEventListener("click", () => { driverKey = "secondary"; localStorage.setItem(STORAGE_DRIVER_KEY, "secondary"); refreshDriverCards(); });
+el.nextDiffBtn.addEventListener("click", showDiffSelect);
+el.backMenuBtn2.addEventListener("click", showMenu);
+el.diffEasyBtn.addEventListener("click", () => { difficulty = "easy"; refreshDiffCards(); });
+el.diffMedBtn.addEventListener("click", () => { difficulty = "medium"; refreshDiffCards(); });
+el.diffHardBtn.addEventListener("click", () => { difficulty = "hard"; refreshDiffCards(); });
+el.nextModeBtn.addEventListener("click", showModeSelect);
+el.backDriverBtn.addEventListener("click", showDriverSelect);
+el.modeRaceBtn.addEventListener("click", () => startGame("race"));
+el.modeLocoBtn.addEventListener("click", () => startGame("loco"));
+el.backDiffBtn.addEventListener("click", showDiffSelect);
+el.pauseBtn.addEventListener("click", () => { game.togglePause(); refreshHud(); });
+el.exitBtn.addEventListener("click", showMenu);
+el.retryBtn.addEventListener("click", () => startGame(lastMode));
+el.backMenuBtn.addEventListener("click", showMenu);
+el.languageBtn.addEventListener("click", () => {
+  lang = lang === "en" ? "es" : "en";
+  localStorage.setItem(STORAGE_LANGUAGE_KEY, lang);
+  game.setLanguage(lang);
   refreshTexts();
-  if (!elements.carPanel.classList.contains("hidden")) {
-    loadAvatarPreview();
-  }
-}
-
-async function toggleTilt() {
+});
+el.audioBtn.addEventListener("click", () => {
   game.unlockAudio();
-  if (!tiltState.supported) {
-    refreshTexts();
-    return;
-  }
-  if (tiltState.enabled || tiltState.wanted) {
-    tiltState.wanted = false;
-    tiltState.enabled = false;
-    localStorage.setItem(STORAGE_TILT_KEY, "0");
-    game.clearTiltInput();
-    refreshTexts();
-    return;
-  }
-
-  tiltState.wanted = true;
-  localStorage.setItem(STORAGE_TILT_KEY, "1");
-  await ensureTiltPermission();
+  const m = game.toggleMuted();
+  localStorage.setItem(STORAGE_MUTE_KEY, m ? "1" : "0");
   refreshTexts();
-}
-
-elements.languageBtn.addEventListener("click", toggleLanguage);
-elements.tiltBtn.addEventListener("click", () => {
-  toggleTilt();
 });
-elements.audioBtn.addEventListener("click", () => {
+el.tiltBtn.addEventListener("click", async () => {
   game.unlockAudio();
-  const muted = game.toggleMuted();
-  localStorage.setItem(STORAGE_MUTE_KEY, muted ? "1" : "0");
+  if (!tilt.supported) return;
+  if (tilt.enabled || tilt.wanted) {
+    tilt.wanted = false; tilt.enabled = false;
+    localStorage.setItem(STORAGE_TILT_KEY, "0"); game.clearTiltInput();
+  } else {
+    tilt.wanted = true; localStorage.setItem(STORAGE_TILT_KEY, "1"); await ensureTilt();
+  }
   refreshTexts();
 });
-elements.garageBtn.addEventListener("click", () => openDriverSelect("race"));
-elements.startRaceBtn.addEventListener("click", () => openDriverSelect("race"));
-elements.startLocoBtn.addEventListener("click", () => openDriverSelect("loco"));
-elements.driverPrimaryBtn.addEventListener("click", () => applyDriver("primary"));
-elements.driverSecondaryBtn.addEventListener("click", () => applyDriver("secondary"));
-elements.launchSelectedBtn.addEventListener("click", () => startMode(pendingMode));
-elements.closeGarageBtn.addEventListener("click", showMenu);
-elements.pauseBtn.addEventListener("click", () => {
-  game.togglePause();
-  syncControlsVisibility();
-  refreshHud();
-});
-elements.exitBtn.addEventListener("click", showMenu);
-elements.restartBtn.addEventListener("click", () => startMode(game.getMode()));
-elements.backMenuBtn.addEventListener("click", showMenu);
 
-const controlMap = {
-  left: "left",
-  right: "right",
-  up: "up",
-  down: "down"
-};
-
-for (const button of [elements.controlLeft, elements.controlUp, elements.controlDown, elements.controlRight]) {
-  const control = controlMap[button.dataset.control];
-  setupHoldButton(
-    button,
-    () => {
-      game.unlockAudio();
-      if (game.getRunState() !== "playing") {
-        return;
-      }
-      if (game.getMode() === "race") {
-        if (control === "left") game.moveLane(-1);
-        if (control === "right") game.moveLane(1);
-      }
-      game.setControl(control, true);
-    },
-    () => {
-      game.setControl(control, false);
-    }
-  );
-}
-
-elements.canvas.addEventListener(
-  "pointerdown",
-  (event) => {
-    if (game.getRunState() !== "playing") {
-      return;
-    }
+// Controls
+for (const [btn, ctrl] of [[el.ctrlLeft,"left"],[el.ctrlRight,"right"],[el.ctrlUp,"up"],[el.ctrlDown,"down"]]) {
+  setupHoldButton(btn, () => {
     game.unlockAudio();
-    if (game.getMode() === "race") {
-      game.tapAt(event.clientX);
-    }
-  },
-  { passive: false }
-);
+    if (game.getRunState() !== "playing") return;
+    if (game.getMode() === "race" && (ctrl === "left" || ctrl === "right")) game.moveLane(ctrl === "left" ? -1 : 1);
+    game.setControl(ctrl, true);
+  }, () => { game.setControl(ctrl, false); });
+}
 
-document.addEventListener("keydown", (event) => {
-  if (event.code === "KeyP") {
-    if (isInPlayState()) {
-      game.togglePause();
-      syncControlsVisibility();
-      refreshHud();
-      event.preventDefault();
-    }
-    return;
-  }
-  if (event.code === "Escape") {
-    showMenu();
-    return;
-  }
-  if (game.getRunState() !== "playing") {
-    return;
-  }
+el.canvas.addEventListener("pointerdown", (e) => {
+  if (game.getRunState() !== "playing") return;
+  game.unlockAudio();
+  if (game.getMode() === "race") game.tapAt(e.clientX);
+}, { passive: false });
 
-  if (event.code === "ArrowLeft") {
-    game.moveLane(-1);
-    game.setControl("left", true);
-    event.preventDefault();
+document.addEventListener("keydown", (e) => {
+  if (e.code === "KeyP" && (game.getRunState() === "playing" || game.getRunState() === "paused")) {
+    game.togglePause(); refreshHud(); e.preventDefault(); return;
   }
-  if (event.code === "ArrowRight") {
-    game.moveLane(1);
-    game.setControl("right", true);
-    event.preventDefault();
-  }
-  if (event.code === "ArrowUp") {
-    game.setControl("up", true);
-    event.preventDefault();
-  }
-  if (event.code === "ArrowDown") {
-    game.setControl("down", true);
-    event.preventDefault();
-  }
+  if (e.code === "Escape") { showMenu(); return; }
+  if (game.getRunState() !== "playing") return;
+  if (e.code === "ArrowLeft") { game.moveLane(-1); game.setControl("left", true); e.preventDefault(); }
+  if (e.code === "ArrowRight") { game.moveLane(1); game.setControl("right", true); e.preventDefault(); }
+  if (e.code === "ArrowUp") { game.setControl("up", true); e.preventDefault(); }
+  if (e.code === "ArrowDown") { game.setControl("down", true); e.preventDefault(); }
+});
+document.addEventListener("keyup", (e) => {
+  if (e.code === "ArrowLeft") game.setControl("left", false);
+  if (e.code === "ArrowRight") game.setControl("right", false);
+  if (e.code === "ArrowUp") game.setControl("up", false);
+  if (e.code === "ArrowDown") game.setControl("down", false);
 });
 
-document.addEventListener("keyup", (event) => {
-  if (event.code === "ArrowLeft") game.setControl("left", false);
-  if (event.code === "ArrowRight") game.setControl("right", false);
-  if (event.code === "ArrowUp") game.setControl("up", false);
-  if (event.code === "ArrowDown") game.setControl("down", false);
-});
-
-if (tiltState.supported) {
-  window.addEventListener("deviceorientation", (event) => {
-    if (!tiltState.enabled || game.getRunState() !== "playing") {
-      game.clearTiltInput();
-      return;
-    }
-    const side = clamp((event.gamma ?? 0) / 28, -1, 1);
-    const throttle = clamp((15 - (event.beta ?? 15)) / 30, -1, 1);
-    game.setTiltInput(side, throttle);
+if (tilt.supported) {
+  window.addEventListener("deviceorientation", (e) => {
+    if (!tilt.enabled || game.getRunState() !== "playing") { game.clearTiltInput(); return; }
+    game.setTiltInput(clamp((e.gamma ?? 0) / 28, -1, 1), clamp((15 - (e.beta ?? 15)) / 30, -1, 1));
   });
 }
 
-window.addEventListener("resize", () => {
-  game.resize(window.innerWidth, window.innerHeight);
-});
+window.addEventListener("resize", () => game.resize(window.innerWidth, window.innerHeight));
+document.body.addEventListener("touchmove", (e) => {
+  if (game.getRunState() === "playing" || game.getRunState() === "paused") e.preventDefault();
+}, { passive: false });
 
-document.body.addEventListener(
-  "touchmove",
-  (event) => {
-    if (isInPlayState()) {
-      event.preventDefault();
-    }
-  },
-  { passive: false }
-);
-
-function loop(timestamp) {
-  game.frame(timestamp);
+function loop(ts) {
+  game.frame(ts);
   const state = game.getRunState();
   if (state === "playing" || state === "paused") {
-    setVisible(elements.hud, true);
-    syncControlsVisibility();
+    setVisible(el.hud, true);
+    setVisible(el.controls, state === "playing");
     refreshHud();
   }
-  if (state === "gameover" && !resultShown) {
-    resultShown = true;
-    showResult();
-  }
+  if (state === "gameover" && !resultShown) { resultShown = true; showResult(); }
   requestAnimationFrame(loop);
 }
 

@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#0a0e2a">
 <title>Estrella Racer</title>
 <link rel="stylesheet" href="./styles.css">
+<script src="https://unpkg.com/three@0.160.0/build/three.min.js"></script>
 </head>
 <body>
 <div id="app">
@@ -20,7 +21,7 @@
     <section id="menuPanel" class="panel">
       <div class="logoWrap">
         <span class="logoStar">⭐</span>
-        <h1 id="gameTitle">ESTRELLA RACER</h1>
+        <h1>ESTRELLA RACER</h1>
         <span class="logoStar">⭐</span>
       </div>
       <button id="playBtn" class="bigPlay">▶  PLAY</button>
@@ -30,11 +31,11 @@
       <h2 class="secTitle">Choose Your Racer</h2>
       <div class="driverRow">
         <button id="pickAxel" class="driverCard active">
-          <canvas id="avatarAxel" class="avatarCanvas" width="160" height="200"></canvas>
+          <div class="avatarWrap"><img id="avatarAxelImg" class="avatarImg hidden" alt="Axel"><canvas id="avatarAxel" class="avatarCanvas" width="160" height="200"></canvas></div>
           <span class="driverLabel" id="labelAxel">Axel</span>
         </button>
         <button id="pickJade" class="driverCard">
-          <canvas id="avatarJade" class="avatarCanvas" width="160" height="200"></canvas>
+          <div class="avatarWrap"><img id="avatarJadeImg" class="avatarImg hidden" alt="Jade"><canvas id="avatarJade" class="avatarCanvas" width="160" height="200"></canvas></div>
           <span class="driverLabel" id="labelJade">Jade</span>
         </button>
       </div>

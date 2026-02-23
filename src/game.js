@@ -154,6 +154,28 @@ class SoundFX {
       });
     });
   }
+  powerupMusic(){
+    this._play(c=>{
+      const t=c.currentTime;
+      const notes=[392,523,659,784,659,523,392,523,659,784,1047,784];
+      notes.forEach((f,i)=>{
+        const o=c.createOscillator(),g=c.createGain();
+        o.type="square";o.frequency.value=f;
+        g.gain.setValueAtTime(.06,t+i*.12);g.gain.exponentialRampToValueAtTime(.01,t+i*.12+.1);
+        o.connect(g);g.connect(c.destination);o.start(t+i*.12);o.stop(t+i*.12+.12);
+      });
+    });
+  }
+  mushroomSound(){
+    this._play(c=>{
+      const t=c.currentTime;
+      const o=c.createOscillator(),g=c.createGain();
+      o.type="sine";o.frequency.setValueAtTime(200,t);
+      o.frequency.exponentialRampToValueAtTime(800,t+.3);
+      g.gain.setValueAtTime(.15,t);g.gain.exponentialRampToValueAtTime(.01,t+.35);
+      o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.4);
+    });
+  }
 }
 export const sfx = new SoundFX();
 /* Avatar drawing - detailed */
@@ -450,7 +472,7 @@ function buildEnemyCar(){
 }
 
 function buildPoliceCar(){
-  const g = buildCar(0x1565c0, false, null);
+  const g = buildCar(0x87CEEB, false, null); // baby blue CPD
   // White doors
   const doorMat = new THREE.MeshPhongMaterial({color:0xffffff});
   [-1.12,1.12].forEach(x=>{
@@ -460,16 +482,16 @@ function buildPoliceCar(){
   // Light bar on roof
   const barBase = new THREE.Mesh(new THREE.BoxGeometry(1.4,0.12,0.5),new THREE.MeshPhongMaterial({color:0x333333}));
   barBase.position.set(0,1.62,-0.1); g.add(barBase);
-  const redLight = new THREE.Mesh(new THREE.SphereGeometry(0.12,6,6),
+  const redLight = new THREE.Mesh(new THREE.SphereGeometry(0.15,6,6),
     new THREE.MeshPhongMaterial({color:0xff0000,emissive:0xff0000,emissiveIntensity:1}));
-  redLight.position.set(-0.35,1.75,-0.1); redLight.name="policeRed"; g.add(redLight);
-  const blueLight = new THREE.Mesh(new THREE.SphereGeometry(0.12,6,6),
+  redLight.position.set(-0.35,1.78,-0.1); redLight.name="policeRed"; g.add(redLight);
+  const blueLight = new THREE.Mesh(new THREE.SphereGeometry(0.15,6,6),
     new THREE.MeshPhongMaterial({color:0x2196f3,emissive:0x2196f3,emissiveIntensity:1}));
-  blueLight.position.set(0.35,1.75,-0.1); blueLight.name="policeBlue"; g.add(blueLight);
+  blueLight.position.set(0.35,1.78,-0.1); blueLight.name="policeBlue"; g.add(blueLight);
   // CPD text
   const sc=document.createElement("canvas");sc.width=64;sc.height=20;
   const sx=sc.getContext("2d");
-  sx.fillStyle="#1565c0";sx.fillRect(0,0,64,20);
+  sx.fillStyle="#87CEEB";sx.fillRect(0,0,64,20);
   sx.fillStyle="#fff";sx.font="bold 14px sans-serif";sx.textAlign="center";
   sx.fillText("CPD",32,16);
   const tex=new THREE.CanvasTexture(sc);
@@ -510,6 +532,33 @@ function buildStarPickup(){
     new THREE.MeshPhongMaterial({color:0xffe082,emissive:0xffcc02,emissiveIntensity:0.4,transparent:true,opacity:0.5,side:THREE.DoubleSide}));
   ring.position.y=1;ring.rotation.x=Math.PI/2;g.add(ring);
   g.userData.type="star"; return g;
+}
+function buildMushroom(){
+  const g = new THREE.Group();
+  // Stem
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.2,0.25,0.5,8),
+    new THREE.MeshPhongMaterial({color:0xfff8e1}));
+  stem.position.y=0.25; g.add(stem);
+  // Cap - red with white spots
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.45,10,10),
+    new THREE.MeshPhongMaterial({color:0xd32f2f}));
+  cap.scale.y=0.5; cap.position.y=0.6; g.add(cap);
+  // White spots
+  const spotMat = new THREE.MeshPhongMaterial({color:0xffffff});
+  [[0,0.72,0.3],[0.25,0.68,0.15],[-0.2,0.7,0.2],[0.1,0.75,-0.25]].forEach(p=>{
+    const spot = new THREE.Mesh(new THREE.SphereGeometry(0.08,6,6),spotMat);
+    spot.position.set(p[0],p[1],p[2]); g.add(spot);
+  });
+  // Eyes
+  const eyeW = new THREE.MeshPhongMaterial({color:0xffffff});
+  const eyeP = new THREE.MeshPhongMaterial({color:0x000000});
+  [-0.1,0.1].forEach(x=>{
+    const ew=new THREE.Mesh(new THREE.SphereGeometry(0.06,6,6),eyeW);
+    ew.position.set(x,0.35,0.22); g.add(ew);
+    const ep=new THREE.Mesh(new THREE.SphereGeometry(0.03,4,4),eyeP);
+    ep.position.set(x,0.35,0.26); g.add(ep);
+  });
+  g.userData.type="mushroom"; return g;
 }
 
 /* Loco objects */
@@ -636,41 +685,48 @@ function buildTowTruck(){
 /* Finish line flag */
 function buildFinishFlag(){
   const g = new THREE.Group();
-  // Pole
-  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,6,8),new THREE.MeshPhongMaterial({color:0x888888}));
-  pole.position.y=3; g.add(pole);
-  // Checkered flag attached to pole
-  const cnv = document.createElement("canvas"); cnv.width=64;cnv.height=40;
+  // Checkered finish line strip across the road
+  const cnv = document.createElement("canvas"); cnv.width=256;cnv.height=64;
   const ctx = cnv.getContext("2d");
-  const sq=8;
-  for(let r=0;r<5;r++) for(let c=0;c<8;c++){
+  const sq=16;
+  for(let r=0;r<4;r++) for(let c=0;c<16;c++){
     ctx.fillStyle=(r+c)%2===0?"#000":"#fff";
     ctx.fillRect(c*sq,r*sq,sq,sq);
   }
-  const flagTex = new THREE.CanvasTexture(cnv);
-  const flagMat = new THREE.MeshPhongMaterial({map:flagTex,side:THREE.DoubleSide});
-  const flag = new THREE.Mesh(new THREE.PlaneGeometry(2,1.2),flagMat);
-  flag.position.set(1,5.4,0); flag.name="flag"; g.add(flag);
-  // City of Chicago flag - second pole
-  const pole2 = new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,5.5,8),new THREE.MeshPhongMaterial({color:0x888888}));
-  pole2.position.set(4,2.75,0); g.add(pole2);
-  // Chicago flag: white with two blue stripes and four red stars
+  const lineTex = new THREE.CanvasTexture(cnv);
+  const lineMat = new THREE.MeshPhongMaterial({map:lineTex,side:THREE.DoubleSide});
+  const line = new THREE.Mesh(new THREE.PlaneGeometry(ROAD_W,3),lineMat);
+  line.rotation.x=-Math.PI/2; line.position.set(0,0.02,0); g.add(line);
+  // Finish banner arch
+  const archMat = new THREE.MeshPhongMaterial({color:0xeeeeee});
+  [-ROAD_W/2, ROAD_W/2].forEach(x=>{
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.12,7,8),archMat);
+    pole.position.set(x,3.5,0); g.add(pole);
+  });
+  const banner = new THREE.Mesh(new THREE.BoxGeometry(ROAD_W,1,0.15),archMat);
+  banner.position.set(0,7,0); g.add(banner);
+  // FINISH text on banner
+  const bc=document.createElement("canvas");bc.width=256;bc.height=48;
+  const bx=bc.getContext("2d");
+  bx.fillStyle="#222";bx.fillRect(0,0,256,48);
+  bx.fillStyle="#fff";bx.font="bold 36px sans-serif";bx.textAlign="center";
+  bx.fillText("FINISH",128,36);
+  const bTex=new THREE.CanvasTexture(bc);
+  const bMat=new THREE.MeshBasicMaterial({map:bTex});
+  const bSign=new THREE.Mesh(new THREE.PlaneGeometry(ROAD_W-1,0.9),bMat);
+  bSign.position.set(0,7,0.08); g.add(bSign);
+  // Chicago flag on side pole
+  const flagPole = new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,5.5,8),new THREE.MeshPhongMaterial({color:0x888888}));
+  flagPole.position.set(ROAD_W/2+2,2.75,0); g.add(flagPole);
   const cc=document.createElement("canvas");cc.width=96;cc.height=60;
   const cx2=cc.getContext("2d");
   cx2.fillStyle="#fff";cx2.fillRect(0,0,96,60);
   cx2.fillStyle="#4fc3f7";cx2.fillRect(0,12,96,8);cx2.fillRect(0,40,96,8);
   cx2.fillStyle="#ef5350";cx2.font="14px sans-serif";
-  const starX=[18,36,54,72];
-  starX.forEach(sx=>{cx2.fillText("\u2736",sx-5,34);});
+  [18,36,54,72].forEach(sx=>{cx2.fillText("\u2736",sx-5,34);});
   const chiTex=new THREE.CanvasTexture(cc);
-  const chiMat=new THREE.MeshPhongMaterial({map:chiTex,side:THREE.DoubleSide});
-  const chiFlag=new THREE.Mesh(new THREE.PlaneGeometry(1.8,1.1),chiMat);
-  chiFlag.position.set(5,4.8,0); chiFlag.name="chiFlag"; g.add(chiFlag);
-  // Base
-  const base = new THREE.Mesh(new THREE.CylinderGeometry(0.3,0.4,0.3,8),new THREE.MeshPhongMaterial({color:0x333333}));
-  base.position.y=0.15; g.add(base);
-  const base2 = new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.35,0.3,8),new THREE.MeshPhongMaterial({color:0x333333}));
-  base2.position.set(4,0.15,0); g.add(base2);
+  const chiFlag=new THREE.Mesh(new THREE.PlaneGeometry(1.8,1.1),new THREE.MeshPhongMaterial({map:chiTex,side:THREE.DoubleSide}));
+  chiFlag.position.set(ROAD_W/2+3,4.8,0); chiFlag.name="chiFlag"; g.add(chiFlag);
   return g;
 }
 /* Roadside scenery builders */
@@ -1354,6 +1410,7 @@ export class EstrellaGame {
     this.fuel=100;this.score=0;this.dist=0;this.goalDist=cfg.goalDist;
     this.speed=30*cfg.speed;this.damage=0;this.invincible=0;this.spawnCooldown=0;
     this._missingWheelSide=0;
+    this._starGlow=0;this._bigMode=0;
     if(this._sparks){this.scene.remove(this._sparks);this._sparks=null;}
     this.paused=false;this.airborne=false;this.jumpVelocity=0;this.jumpY=0;
     this.state="playing";this.victoryPhase=0;this.victoryTimer=0;
@@ -1434,6 +1491,8 @@ export class EstrellaGame {
     if(Math.random()<0.004){const f=buildGasCan();const lane=Math.floor(Math.random()*cfg.lanes);f.position.set(this._laneX(lane),0,-ROAD_LEN/2);this.scene.add(f);this.pickups.push(f);}
     // Spawn stars
     if(Math.random()<0.006){const s=buildStarPickup();const lane=Math.floor(Math.random()*cfg.lanes);s.position.set(this._laneX(lane),0,-ROAD_LEN/2);this.scene.add(s);this.pickups.push(s);}
+    // Spawn mushrooms
+    if(Math.random()<0.003){const m=buildMushroom();const lane=Math.floor(Math.random()*cfg.lanes);m.position.set(this._laneX(lane),0,-ROAD_LEN/2);this.scene.add(m);this.pickups.push(m);}
     // Update enemies
     for(let i=this.obstacles.length-1;i>=0;i--){
       const o=this.obstacles[i];
@@ -1458,18 +1517,44 @@ export class EstrellaGame {
       r.position.z+=effectiveSpeed*dt;
       if(r.userData.type==="star")r.rotation.y+=dt*3;
       if(r.userData.type==="fuel")r.rotation.y+=dt*1.5;
+      if(r.userData.type==="mushroom")r.rotation.y+=dt*2;
       if(r.position.z>15){this.scene.remove(r);this.pickups.splice(i,1);continue;}
       const dx=Math.abs(r.position.x-this.playerCar.position.x);
       const dz=Math.abs(r.position.z-this.playerCar.position.z);
       if(dx<1.8&&dz<2.5){
         const type=r.userData.type;
         if(type==="fuel"){this.fuel=Math.min(100,this.fuel+25);sfx.boost();}
-        else if(type==="star"){this.score+=150;sfx.starChime();this.invincible=Math.max(this.invincible,4);}
+        else if(type==="star"){
+          this.score+=150;sfx.starChime();sfx.powerupMusic();
+          this.invincible=Math.max(this.invincible,3);
+          this._starGlow=3; // car glow timer
+        }
+        else if(type==="mushroom"){
+          sfx.mushroomSound();this._bigMode=5; // 5 seconds of big car
+          this.playerCar.scale.set(1.5,1.5,1.5);
+        }
         else if(type==="ramp"&&!this.airborne){this.airborne=true;this.jumpVelocity=12;this.jumpY=0.1;sfx.jump();this.speed+=10;}
         if(type!=="ramp"){this.scene.remove(r);this.pickups.splice(i,1);}
       }
     }
-    if(this.invincible>0){this.invincible-=dt;if(this.playerCar)this.playerCar.visible=Math.sin(Date.now()*0.02)>0;}
+    // Star glow: car blinks rainbow colors
+    if(this._starGlow>0){
+      this._starGlow-=dt;
+      if(this.playerCar){
+        this.playerCar.visible=true;
+        const hue=(Date.now()*0.005)%1;
+        const col=new THREE.Color().setHSL(hue,1,0.6);
+        this.playerCar.traverse(c=>{if(c.name==="body"&&c.material)c.material.emissive.copy(col);});
+      }
+    } else if(this.playerCar){
+      this.playerCar.traverse(c=>{if(c.name==="body"&&c.material)c.material.emissive.setHex(0x000000);});
+    }
+    // Mushroom big mode countdown
+    if(this._bigMode>0){
+      this._bigMode-=dt;
+      if(this._bigMode<=0&&this.playerCar) this.playerCar.scale.set(1,1,1);
+    }
+    if(this.invincible>0){this.invincible-=dt;if(this.playerCar&&!this._starGlow)this.playerCar.visible=Math.sin(Date.now()*0.02)>0;}
     else if(this.playerCar)this.playerCar.visible=true;
     this.score+=effectiveSpeed*dt*0.5;
     sfx.engine(effectiveSpeed);
@@ -1588,19 +1673,13 @@ export class EstrellaGame {
         this.roadTex.offset.y-=20*dt*0.08*(1-t/3);
       }
     }
-    // Flag waving animation
+    // Finish line animation
     if(this.finishFlag){
       this.finishFlag.traverse(c=>{
-        if(c.name==="flag"){
-          c.rotation.y=Math.sin(t*5)*0.15;
-          c.position.x=1+Math.sin(t*4)*0.1;
-        }
         if(c.name==="chiFlag"){
           c.rotation.y=Math.sin(t*4+1)*0.12;
-          c.position.x=5+Math.sin(t*3.5)*0.08;
         }
       });
-      // Move flag toward player
       if(t<2){
         this.finishFlag.position.z+=(3-this.finishFlag.position.z)*0.04;
       }

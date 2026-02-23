@@ -139,6 +139,7 @@ class SoundFX {
     });
   }
 }
+export const sfx = new SoundFX();
 /* Avatar drawing - detailed */
 export function drawAvatar(canvas, who){
   const ctx=canvas.getContext("2d");

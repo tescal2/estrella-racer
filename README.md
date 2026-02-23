@@ -2,10 +2,13 @@
 
 Lightweight browser racing game for GitHub Pages with:
 - Bilingual UI (English/Spanish)
-- Personalized player names (Axel + Jade by default)
+- Character select (Axel/Jade) + personalized player names
 - Two modes: Race Mode + Loco Mode
-- Star-heavy neon theme
+- Star-heavy neon theme with modern scenery
+- Enemy fleet racers (no child names on opponents)
+- HUD systems: score, SRS, timer, fuel, combo, and event flashes
 - iPhone Safari-first controls and layout
+- Device tilt support (side-to-side steering, up/down speed)
 
 ## Run locally
 Open `index.html` in a browser.

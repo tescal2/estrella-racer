@@ -1,14 +1,12 @@
-import { getPlateName } from "./personalization.js";
-
 const MAX_DPR = 2;
-const STAR_FIELD_COUNT = 80;
+const STAR_FIELD_COUNT = 95;
 const RACE_LANES = [-1, 0, 1];
 const RACE_PLAYER_Y = 0.82;
-const RACE_BASE_SPEED = 340;
+const RACE_BASE_SPEED = 355;
 const RACE_BASE_SPAWN = 0.9;
-const LOCO_WORLD_W = 2600;
-const LOCO_WORLD_H = 1800;
-const LOCO_PROP_COUNT = 72;
+const LOCO_WORLD_W = 2800;
+const LOCO_WORLD_H = 1900;
+const LOCO_PROP_COUNT = 86;
 
 export const CAR_PRESETS = [
   {
@@ -73,6 +71,13 @@ export const CAR_PRESETS = [
   }
 ];
 
+const FLEET_PRESETS = [
+  { body: "#212633", accent: "#ff4d4d", stripe: "#5d0b16", glow: "rgba(255,77,77,0.45)" },
+  { body: "#1a2438", accent: "#ff7a00", stripe: "#4c1f00", glow: "rgba(255,122,0,0.42)" },
+  { body: "#1b1f2e", accent: "#ff2fd0", stripe: "#4c0052", glow: "rgba(255,47,208,0.45)" },
+  { body: "#1b2836", accent: "#4de3ff", stripe: "#00364a", glow: "rgba(77,227,255,0.45)" }
+];
+
 const CAR_BY_ID = Object.fromEntries(CAR_PRESETS.map((car) => [car.id, car]));
 
 function clamp(value, min, max) {
@@ -106,7 +111,7 @@ function drawStar(ctx, x, y, outer, inner, points = 5) {
   let angle = -Math.PI * 0.5;
   const step = Math.PI / points;
   ctx.beginPath();
-  for (let i = 0; i < points * 2; i++) {
+  for (let i = 0; i < points * 2; i += 1) {
     const radius = i % 2 === 0 ? outer : inner;
     const px = x + Math.cos(angle) * radius;
     const py = y + Math.sin(angle) * radius;
@@ -116,6 +121,21 @@ function drawStar(ctx, x, y, outer, inner, points = 5) {
       ctx.lineTo(px, py);
     }
     angle += step;
+  }
+  ctx.closePath();
+}
+
+function drawHex(ctx, x, y, radius) {
+  ctx.beginPath();
+  for (let i = 0; i < 6; i += 1) {
+    const angle = Math.PI / 3 * i + Math.PI / 6;
+    const px = x + Math.cos(angle) * radius;
+    const py = y + Math.sin(angle) * radius;
+    if (i === 0) {
+      ctx.moveTo(px, py);
+    } else {
+      ctx.lineTo(px, py);
+    }
   }
   ctx.closePath();
 }
@@ -131,6 +151,7 @@ export class EstrellaGame {
 
     this.language = "en";
     this.profile = { primaryName: "Axel", secondaryName: "Jade" };
+    this.driverKey = "primary";
     this.selectedCarId = CAR_PRESETS[0].id;
 
     this.mode = "race";
@@ -142,13 +163,23 @@ export class EstrellaGame {
     this.stars = 0;
     this.combo = 1;
     this.crashes = 0;
+    this.timeElapsed = 0;
+    this.maxFuel = 100;
+    this.fuel = this.maxFuel;
+
+    this.scorePulse = 0;
+    this.srsPulse = 0;
+    this.flashEventKey = "";
+    this.flashEventTimer = 0;
 
     this.control = { left: false, right: false, up: false, down: false };
+    this.tiltInput = { enabled: false, x: 0, y: 0 };
+
     this.starfield = Array.from({ length: STAR_FIELD_COUNT }, () => ({
       x: Math.random(),
       y: Math.random(),
-      size: rand(0.8, 2.4),
-      speed: rand(0.01, 0.07)
+      size: rand(0.8, 2.8),
+      speed: rand(0.01, 0.085)
     }));
     this.effects = [];
     this.sceneTime = 0;
@@ -180,6 +211,18 @@ export class EstrellaGame {
       primaryName: profile.primaryName || "Axel",
       secondaryName: profile.secondaryName || "Jade"
     };
+  }
+
+  setDriverKey(driverKey) {
+    this.driverKey = driverKey === "secondary" ? "secondary" : "primary";
+  }
+
+  getDriverKey() {
+    return this.driverKey;
+  }
+
+  getDriverName() {
+    return this.driverKey === "secondary" ? this.profile.secondaryName : this.profile.primaryName;
   }
 
   setSelectedCar(id) {
@@ -238,8 +281,14 @@ export class EstrellaGame {
     this.stars = 0;
     this.combo = 1;
     this.crashes = 0;
+    this.timeElapsed = 0;
+    this.fuel = this.maxFuel;
     this.effects = [];
     this.sceneTime = 0;
+    this.scorePulse = 0;
+    this.srsPulse = 0;
+    this.flashEventTimer = 0;
+    this.flashEventKey = "";
     this.lastFrame = performance.now();
     this.resetControls();
     if (this.mode === "race") {
@@ -256,6 +305,7 @@ export class EstrellaGame {
   stopToMenu() {
     this.runState = "menu";
     this.resetControls();
+    this.clearTiltInput();
   }
 
   togglePause() {
@@ -286,6 +336,13 @@ export class EstrellaGame {
     };
   }
 
+  setControl(controlName, active) {
+    if (!(controlName in this.control)) {
+      return;
+    }
+    this.control[controlName] = Boolean(active);
+  }
+
   resetControls() {
     this.control.left = false;
     this.control.right = false;
@@ -293,15 +350,24 @@ export class EstrellaGame {
     this.control.down = false;
   }
 
+  setTiltInput(x, y) {
+    this.tiltInput.enabled = true;
+    this.tiltInput.x = clamp(x, -1, 1);
+    this.tiltInput.y = clamp(y, -1, 1);
+  }
+
+  clearTiltInput() {
+    this.tiltInput.enabled = false;
+    this.tiltInput.x = 0;
+    this.tiltInput.y = 0;
+  }
+
   moveLane(direction) {
     if (this.mode !== "race" || this.runState !== "playing") {
       return;
     }
-    const nextLane = clamp(this.race.playerLane + direction, -1, 1);
-    if (nextLane !== this.race.playerLane) {
-      this.race.playerLane = nextLane;
-      this.tone(440, 0.06, "triangle", 0.07);
-    }
+    this.race.playerX = clamp(this.race.playerX + direction * 0.55, -1, 1);
+    this.tone(450, 0.05, "triangle", 0.08);
   }
 
   tapAt(x) {
@@ -309,13 +375,6 @@ export class EstrellaGame {
       return;
     }
     this.moveLane(x < this.width * 0.5 ? -1 : 1);
-  }
-
-  setControl(controlName, active) {
-    if (!(controlName in this.control)) {
-      return;
-    }
-    this.control[controlName] = Boolean(active);
   }
 
   frame(timestamp) {
@@ -329,54 +388,128 @@ export class EstrellaGame {
       } else {
         this.updateLoco(dt);
       }
+      this.updateFeedback(dt);
     }
 
     this.updateEffects(dt);
     this.draw();
   }
 
+  updateFeedback(dt) {
+    this.scorePulse = Math.max(0, this.scorePulse - dt);
+    this.srsPulse = Math.max(0, this.srsPulse - dt);
+    this.flashEventTimer = Math.max(0, this.flashEventTimer - dt);
+    if (this.flashEventTimer <= 0) {
+      this.flashEventKey = "";
+    }
+  }
+
+  setFlashEvent(eventKey, duration = 0.8) {
+    this.flashEventKey = eventKey;
+    this.flashEventTimer = duration;
+  }
+
+  consumeFuel(amount) {
+    this.fuel = clamp(this.fuel - amount, 0, this.maxFuel);
+    if (this.fuel <= 18 && this.flashEventKey !== "eventLowFuel") {
+      this.setFlashEvent("eventLowFuel", 0.6);
+    }
+  }
+
+  refillFuel(amount) {
+    this.fuel = clamp(this.fuel + amount, 0, this.maxFuel);
+  }
+
+  boostScore(value, eventKey = "") {
+    this.score += value;
+    this.scorePulse = 0.35;
+    this.srsPulse = 0.35;
+    if (eventKey) {
+      this.setFlashEvent(eventKey);
+    }
+  }
+
+  getSteerInput() {
+    const button = (this.control.right ? 1 : 0) - (this.control.left ? 1 : 0);
+    const tilt = this.tiltInput.enabled ? this.tiltInput.x : 0;
+    return clamp(button + tilt, -1, 1);
+  }
+
+  getThrottleInput() {
+    const buttons = (this.control.up ? 1 : 0) - (this.control.down ? 1 : 0);
+    const tilt = this.tiltInput.enabled ? this.tiltInput.y : 0;
+    return clamp(buttons + tilt, -1, 1);
+  }
+
   resetRace() {
     this.race = {
-      playerLane: 0,
+      playerX: 0,
       speed: RACE_BASE_SPEED,
+      speedTarget: RACE_BASE_SPEED,
       spawnTimer: 0,
       roadOffset: 0,
       traffic: [],
-      plateCursor: 0,
+      fleetSerial: 0,
       comboTimer: 0
     };
   }
 
   spawnRaceEntity() {
     const lane = choose(RACE_LANES);
-    if (Math.random() < 0.34) {
+    const roll = Math.random();
+    if (roll < 0.32) {
       this.race.traffic.push({
         type: "star",
         lane,
         y: -90,
         wobble: rand(0, Math.PI * 2),
-        speedMul: 1
+        speedMul: rand(0.92, 1.06)
       });
       return;
     }
-    const aiCars = CAR_PRESETS.filter((car) => car.id !== this.selectedCarId);
-    const aiCar = choose(aiCars.length > 0 ? aiCars : CAR_PRESETS);
+    if (roll < 0.48) {
+      this.race.traffic.push({
+        type: "fuel",
+        lane,
+        y: -110,
+        wobble: rand(0, Math.PI * 2),
+        speedMul: rand(0.9, 1.08)
+      });
+      return;
+    }
+    const fleet = choose(FLEET_PRESETS);
+    this.race.fleetSerial += 1;
     this.race.traffic.push({
       type: "car",
       lane,
       y: -140,
       wobble: rand(0, Math.PI * 2),
-      speedMul: rand(0.8, 1.15),
-      carId: aiCar.id,
-      plate: getPlateName(this.profile, this.race.plateCursor++)
+      speedMul: rand(0.82, 1.18),
+      fleet,
+      tag: `VX-${String((this.race.fleetSerial % 97) + 3).padStart(2, "0")}`,
+      nearMissed: false
     });
   }
 
   updateRace(dt) {
-    this.race.speed = clamp(this.race.speed + dt * 14, RACE_BASE_SPEED, 640);
-    this.race.roadOffset = (this.race.roadOffset + dt * this.race.speed * 0.008) % 1;
+    this.timeElapsed += dt;
 
-    const spawnInterval = Math.max(0.44, RACE_BASE_SPAWN - (this.race.speed - RACE_BASE_SPEED) / 1800);
+    const steerInput = this.getSteerInput();
+    const throttleInput = this.getThrottleInput();
+    this.race.playerX = clamp(this.race.playerX + steerInput * dt * 2.6, -1, 1);
+
+    this.race.speedTarget = clamp(360 + throttleInput * 180 + Math.min(this.stars * 2, 120), 260, 730);
+    this.race.speed += (this.race.speedTarget - this.race.speed) * dt * 2.4;
+    this.race.roadOffset = (this.race.roadOffset + dt * this.race.speed * 0.009) % 1;
+
+    const fuelDrain = 2.8 + (this.race.speed - 260) / 180 + Math.abs(steerInput) * 0.95 + Math.max(0, throttleInput) * 1.35;
+    this.consumeFuel(fuelDrain * dt);
+    if (this.fuel <= 0) {
+      this.outOfFuel();
+      return;
+    }
+
+    const spawnInterval = Math.max(0.34, RACE_BASE_SPAWN - (this.race.speed - RACE_BASE_SPEED) / 1700);
     this.race.spawnTimer -= dt;
     if (this.race.spawnTimer <= 0) {
       this.race.spawnTimer = spawnInterval;
@@ -388,7 +521,7 @@ export class EstrellaGame {
       this.combo = Math.max(1, this.combo - dt * 1.5);
     }
 
-    const playerX = this.laneToX(this.race.playerLane);
+    const playerX = this.raceXToCanvas(this.race.playerX);
     const playerY = this.height * RACE_PLAYER_Y;
     const playerW = 76 * this.carScale();
     const playerH = 118 * this.carScale();
@@ -396,18 +529,30 @@ export class EstrellaGame {
     for (let index = this.race.traffic.length - 1; index >= 0; index -= 1) {
       const entity = this.race.traffic[index];
       entity.y += this.race.speed * entity.speedMul * dt;
-      const entityX = this.laneToX(entity.lane) + Math.sin(this.sceneTime * 3 + entity.wobble) * 7;
+      const entityX = this.laneToX(entity.lane) + Math.sin(this.sceneTime * 3 + entity.wobble) * 9;
 
       if (entity.type === "star") {
         const dx = playerX - entityX;
         const dy = playerY - entity.y;
-        if (dx * dx + dy * dy < 42 * 42 * this.carScale()) {
+        if (dx * dx + dy * dy < 44 * 44 * this.carScale()) {
           this.stars += 1;
-          this.score += Math.round(45 * this.combo);
-          this.combo = clamp(this.combo + 1, 1, 15);
-          this.race.comboTimer = 2.2;
-          this.spawnBurst(entityX, entity.y, "#ffd166", 11, false);
-          this.tone(880, 0.09, "sine", 0.12);
+          this.combo = clamp(this.combo + 1, 1, 18);
+          this.race.comboTimer = 2.4;
+          this.refillFuel(3.5);
+          this.boostScore(Math.round(52 * this.combo), "eventStarChain");
+          this.spawnBurst(entityX, entity.y, "#ffd166", 12, false);
+          this.tone(910, 0.08, "sine", 0.12);
+          this.race.traffic.splice(index, 1);
+          continue;
+        }
+      } else if (entity.type === "fuel") {
+        const dx = playerX - entityX;
+        const dy = playerY - entity.y;
+        if (dx * dx + dy * dy < 50 * 50 * this.carScale()) {
+          this.refillFuel(22);
+          this.boostScore(Math.round(35 * Math.max(1, this.combo * 0.6)), "eventFuelPickup");
+          this.spawnBurst(entityX, entity.y, "#63f1ff", 14, false);
+          this.tone(620, 0.1, "square", 0.1);
           this.race.traffic.splice(index, 1);
           continue;
         }
@@ -421,11 +566,21 @@ export class EstrellaGame {
           this.crashRace(playerX, playerY);
           return;
         }
+
+        if (!entity.nearMissed && entity.y > playerY - 30 && entity.y < playerY + 16) {
+          if (Math.abs(playerX - entityX) < playerW * 0.9 && Math.abs(playerX - entityX) > playerW * 0.45) {
+            entity.nearMissed = true;
+            this.combo = clamp(this.combo + 0.7, 1, 20);
+            this.race.comboTimer = 2;
+            this.boostScore(Math.round(40 * this.combo), "eventNearMiss");
+            this.tone(530, 0.06, "triangle", 0.08);
+          }
+        }
       }
 
-      if (entity.y > this.height + 130) {
+      if (entity.y > this.height + 150) {
         if (entity.type === "car") {
-          this.score += Math.round(12 * this.combo);
+          this.boostScore(Math.round(14 * this.combo));
         }
         this.race.traffic.splice(index, 1);
       }
@@ -442,6 +597,18 @@ export class EstrellaGame {
     this.tone(160, 0.24, "sawtooth", 0.2);
     this.tone(90, 0.36, "triangle", 0.14);
     this.resetControls();
+    this.clearTiltInput();
+  }
+
+  outOfFuel() {
+    this.runState = "gameover";
+    this.combo = 1;
+    this.resultTitleKey = "resultFuelTitle";
+    this.resultMessageKey = "resultFuelMessage";
+    this.spawnBurst(this.raceXToCanvas(this.race.playerX), this.height * RACE_PLAYER_Y, "#8ae7ff", 18, false);
+    this.tone(120, 0.35, "sawtooth", 0.16);
+    this.resetControls();
+    this.clearTiltInput();
   }
 
   resetLoco() {
@@ -463,14 +630,15 @@ export class EstrellaGame {
   }
 
   createLocoProp() {
-    const type = choose(["crate", "cone", "starSign"]);
+    const type = choose(["crate", "cone", "starSign", "drone"]);
     let radius = 24;
     if (type === "cone") radius = 20;
     if (type === "starSign") radius = 26;
+    if (type === "drone") radius = 28;
     return {
       type,
-      x: rand(110, this.loco.worldW - 110),
-      y: rand(110, this.loco.worldH - 110),
+      x: rand(120, this.loco.worldW - 120),
+      y: rand(120, this.loco.worldH - 120),
       radius,
       alive: true
     };
@@ -478,33 +646,41 @@ export class EstrellaGame {
 
   refillLocoProps() {
     const aliveCount = this.loco.props.filter((prop) => prop.alive).length;
-    if (aliveCount > LOCO_PROP_COUNT * 0.48) {
+    if (aliveCount > LOCO_PROP_COUNT * 0.5) {
       return;
     }
-    for (let i = 0; i < 16; i += 1) {
+    for (let i = 0; i < 18; i += 1) {
       this.loco.props.push(this.createLocoProp());
     }
   }
 
   updateLoco(dt) {
-    const axisX = (this.control.right ? 1 : 0) - (this.control.left ? 1 : 0);
-    const axisY = (this.control.down ? 1 : 0) - (this.control.up ? 1 : 0);
+    this.timeElapsed += dt;
+    const axisX = clamp(this.getSteerInput(), -1, 1);
+    const axisY = clamp((this.control.down ? 1 : 0) - (this.control.up ? 1 : 0) - (this.tiltInput.enabled ? this.tiltInput.y : 0), -1, 1);
     const player = this.loco.player;
 
     if (axisX !== 0 || axisY !== 0) {
-      player.vx += axisX * 980 * dt;
-      player.vy += axisY * 980 * dt;
+      player.vx += axisX * 1040 * dt;
+      player.vy += axisY * 1040 * dt;
     }
 
-    const drag = Math.pow(0.86, dt * 60);
+    const drag = Math.pow(0.84, dt * 60);
     player.vx *= drag;
     player.vy *= drag;
 
     const speed = Math.hypot(player.vx, player.vy);
-    if (speed > 430) {
-      const scale = 430 / speed;
+    if (speed > 470) {
+      const scale = 470 / speed;
       player.vx *= scale;
       player.vy *= scale;
+    }
+
+    const fuelDrain = 1.9 + speed / 220 + (Math.abs(axisX) + Math.abs(axisY)) * 0.28;
+    this.consumeFuel(fuelDrain * dt);
+    if (this.fuel <= 0) {
+      this.outOfFuel();
+      return;
     }
 
     player.x = clamp(player.x + player.vx * dt, player.radius, this.loco.worldW - player.radius);
@@ -528,25 +704,31 @@ export class EstrellaGame {
       if (dx * dx + dy * dy <= impactDistance * impactDistance) {
         prop.alive = false;
         this.crashes += 1;
-        this.combo = clamp(this.combo + 1, 1, 20);
-        this.loco.comboTimer = 2.1;
+        this.combo = clamp(this.combo + 1, 1, 22);
+        this.loco.comboTimer = 2.2;
         const isStarProp = prop.type === "starSign";
+        const isDroneProp = prop.type === "drone";
         this.stars += isStarProp ? 2 : 1;
-        this.score += Math.round((isStarProp ? 46 : 28) * this.combo);
-        this.spawnBurst(prop.x, prop.y, isStarProp ? "#ffd166" : "#8ad6ff", 16, true);
-        this.tone(isStarProp ? 760 : 280, 0.11, "square", 0.09);
+        this.refillFuel(isStarProp ? 7 : 4);
+        this.boostScore(Math.round((isStarProp ? 55 : isDroneProp ? 48 : 33) * this.combo), "eventLocoSmash");
+        this.spawnBurst(prop.x, prop.y, isStarProp ? "#ffd166" : isDroneProp ? "#ff77f4" : "#8ad6ff", 16, true);
+        this.tone(isStarProp ? 760 : 320, 0.11, "square", 0.09);
       }
     }
     this.refillLocoProps();
   }
 
+  raceXToCanvas(xNorm) {
+    const laneSpan = Math.min(this.width * 0.25, 148);
+    return this.width * 0.5 + laneSpan * xNorm;
+  }
+
   laneToX(laneIndex) {
-    const laneSpan = Math.min(this.width * 0.24, 130);
-    return this.width * 0.5 + laneIndex * laneSpan;
+    return this.raceXToCanvas(laneIndex);
   }
 
   carScale() {
-    return clamp(this.width / 430, 0.75, 1.18);
+    return clamp(this.width / 430, 0.75, 1.2);
   }
 
   spawnBurst(x, y, color, count, world) {
@@ -555,11 +737,10 @@ export class EstrellaGame {
         x,
         y,
         vx: rand(-130, 130),
-        vy: rand(-140, 90),
+        vy: rand(-150, 90),
         size: rand(2, 5),
         color,
-        life: rand(0.35, 0.75),
-        maxLife: 1,
+        life: rand(0.35, 0.78),
         world: Boolean(world)
       });
     }
@@ -570,7 +751,7 @@ export class EstrellaGame {
       const particle = this.effects[i];
       particle.x += particle.vx * dt;
       particle.y += particle.vy * dt;
-      particle.vy += 180 * dt;
+      particle.vy += 190 * dt;
       particle.life -= dt;
       if (particle.life <= 0) {
         this.effects.splice(i, 1);
@@ -601,16 +782,22 @@ export class EstrellaGame {
   drawBackground(ctx) {
     const gradient = ctx.createLinearGradient(0, 0, 0, this.height);
     gradient.addColorStop(0, "#2f3270");
-    gradient.addColorStop(0.5, "#10153c");
-    gradient.addColorStop(1, "#090b1d");
+    gradient.addColorStop(0.5, "#11183f");
+    gradient.addColorStop(1, "#080a1d");
     ctx.fillStyle = gradient;
     ctx.fillRect(0, 0, this.width, this.height);
+
+    const glow = ctx.createRadialGradient(this.width * 0.78, this.height * 0.08, 20, this.width * 0.78, this.height * 0.08, this.width * 0.35);
+    glow.addColorStop(0, "rgba(255,205,140,0.3)");
+    glow.addColorStop(1, "rgba(255,205,140,0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, this.width, this.height * 0.4);
 
     for (const star of this.starfield) {
       const y = ((star.y + this.sceneTime * star.speed) % 1) * this.height;
       const x = star.x * this.width;
-      ctx.globalAlpha = 0.28 + (star.size * 0.14);
-      ctx.fillStyle = "#fff6b7";
+      ctx.globalAlpha = 0.2 + star.size * 0.16;
+      ctx.fillStyle = "#fff4bb";
       ctx.beginPath();
       ctx.arc(x, y, star.size, 0, Math.PI * 2);
       ctx.fill();
@@ -618,12 +805,57 @@ export class EstrellaGame {
     ctx.globalAlpha = 1;
   }
 
+  drawRaceScenery(ctx, topY, bottomY, cx, topW, bottomW) {
+    const horizon = topY - this.height * 0.08;
+
+    const skylineY = horizon;
+    const drift = (this.sceneTime * this.race.speed * 0.03) % (this.width * 0.22);
+    for (let layer = 0; layer < 2; layer += 1) {
+      const opacity = layer === 0 ? 0.26 : 0.36;
+      const step = layer === 0 ? 72 : 58;
+      const heightBase = layer === 0 ? 36 : 52;
+      ctx.fillStyle = layer === 0 ? `rgba(49,73,134,${opacity})` : `rgba(24,40,94,${opacity})`;
+      for (let x = -step; x < this.width + step; x += step) {
+        const ix = x - (drift * (layer === 0 ? 0.3 : 0.55));
+        const h = heightBase + ((x / step) % 4) * 10 + (layer * 12);
+        ctx.fillRect(ix, skylineY - h, step - 8, h);
+      }
+    }
+
+    ctx.strokeStyle = "rgba(120,210,255,0.45)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(cx - topW - 16, topY + 6);
+    ctx.lineTo(cx - bottomW * 0.5 - 24, bottomY);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx + topW + 16, topY + 6);
+    ctx.lineTo(cx + bottomW * 0.5 + 24, bottomY);
+    ctx.stroke();
+
+    ctx.fillStyle = "rgba(255,108,70,0.85)";
+    drawRoundedRect(ctx, 12, topY + 18, 84, 24, 8);
+    ctx.fill();
+    ctx.fillStyle = "#1b0927";
+    ctx.font = "bold 12px Arial";
+    ctx.textAlign = "center";
+    ctx.fillText("FLEET ZONE", 54, topY + 34);
+
+    ctx.fillStyle = "rgba(120,255,190,0.85)";
+    drawRoundedRect(ctx, this.width - 96, topY + 18, 84, 24, 8);
+    ctx.fill();
+    ctx.fillStyle = "#0d2525";
+    ctx.fillText("STAR RUN", this.width - 54, topY + 34);
+  }
+
   drawRace(ctx, previewOnly) {
     const topY = this.height * 0.18;
     const bottomY = this.height + 24;
     const topW = this.width * 0.16;
-    const bottomW = this.width * 0.88;
+    const bottomW = this.width * 0.9;
     const cx = this.width * 0.5;
+
+    this.drawRaceScenery(ctx, topY, bottomY, cx, topW, bottomW);
 
     ctx.save();
     ctx.beginPath();
@@ -633,20 +865,21 @@ export class EstrellaGame {
     ctx.lineTo(cx - bottomW * 0.5, bottomY);
     ctx.closePath();
     const roadGradient = ctx.createLinearGradient(0, topY, 0, bottomY);
-    roadGradient.addColorStop(0, "#1e2448");
-    roadGradient.addColorStop(1, "#0f1328");
+    roadGradient.addColorStop(0, "#1a203f");
+    roadGradient.addColorStop(0.5, "#121930");
+    roadGradient.addColorStop(1, "#090f1e");
     ctx.fillStyle = roadGradient;
     ctx.fill();
     ctx.restore();
 
-    ctx.strokeStyle = "rgba(255,255,255,0.18)";
-    ctx.lineWidth = 2;
-    const roadOffset = (this.race.roadOffset + this.sceneTime * 0.08) % 1;
+    const stripOffset = (this.race.roadOffset + this.sceneTime * 0.12) % 1;
     for (let i = 0; i < 18; i += 1) {
-      const t = ((i / 18 + roadOffset) % 1);
+      const t = (i / 18 + stripOffset) % 1;
       const y = topY + t * (bottomY - topY);
       const widthAtY = topW + (bottomW * 0.5 - topW) * t;
-      const laneDashLength = 12 + t * 18;
+      const laneDashLength = 12 + t * 19;
+      ctx.strokeStyle = "rgba(255,255,255,0.2)";
+      ctx.lineWidth = 2;
       for (let lane = 1; lane <= 2; lane += 1) {
         const laneX = cx - widthAtY + (widthAtY * 2 * lane) / 3;
         ctx.beginPath();
@@ -660,29 +893,54 @@ export class EstrellaGame {
 
     const traffic = this.race.traffic;
     for (const entity of traffic) {
-      const x = this.laneToX(entity.lane) + Math.sin(this.sceneTime * 3 + entity.wobble) * 7;
+      const x = this.laneToX(entity.lane) + Math.sin(this.sceneTime * 3 + entity.wobble) * 9;
       if (entity.type === "star") {
         ctx.fillStyle = "#ffd166";
-        ctx.strokeStyle = "rgba(255,255,255,0.55)";
+        ctx.strokeStyle = "rgba(255,255,255,0.65)";
         drawStar(ctx, x, entity.y, 16 * this.carScale(), 8 * this.carScale(), 5);
         ctx.fill();
         ctx.stroke();
+      } else if (entity.type === "fuel") {
+        this.drawFuelCell(ctx, x, entity.y, this.carScale());
       } else {
-        const car = CAR_BY_ID[entity.carId] || CAR_PRESETS[1];
-        this.drawCar(ctx, x, entity.y, 0.78 * this.carScale(), car, entity.plate);
+        this.drawCar(ctx, x, entity.y, 0.78 * this.carScale(), entity.fleet, "", 0, {
+          enemy: true,
+          badge: entity.tag
+        });
       }
     }
 
-    const playerX = this.laneToX(this.race.playerLane);
+    const playerX = this.raceXToCanvas(this.race.playerX);
     const playerY = this.height * RACE_PLAYER_Y;
-    this.drawCar(ctx, playerX, playerY, this.carScale(), this.getSelectedCar(), getPlateName(this.profile, this.stars + this.crashes));
+    this.drawCar(ctx, playerX, playerY, this.carScale(), this.getSelectedCar(), this.getDriverName());
 
     if (previewOnly) {
-      ctx.fillStyle = "rgba(255,255,255,0.88)";
+      ctx.fillStyle = "rgba(255,255,255,0.92)";
       ctx.textAlign = "center";
       ctx.font = "bold 18px Arial";
-      ctx.fillText("⭐ Estrella Rush ⭐", this.width * 0.5, this.height * 0.16);
+      ctx.fillText("⭐ ESTRELLA RUSH VS SHADOW FLEET ⭐", this.width * 0.5, this.height * 0.16);
     }
+  }
+
+  drawFuelCell(ctx, x, y, scale) {
+    const size = 22 * scale;
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.fillStyle = "#54e0ff";
+    drawRoundedRect(ctx, -size * 0.65, -size * 0.75, size * 1.3, size * 1.5, size * 0.18);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(255,255,255,0.75)";
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    ctx.fillStyle = "#10233f";
+    drawHex(ctx, 0, 0, size * 0.42);
+    ctx.fill();
+    ctx.fillStyle = "#aef6ff";
+    ctx.font = `bold ${Math.max(8, size * 0.5)}px Arial`;
+    ctx.textAlign = "center";
+    ctx.fillText("F", 0, size * 0.18);
+    ctx.restore();
   }
 
   drawLoco(ctx) {
@@ -691,14 +949,14 @@ export class EstrellaGame {
     const camY = clamp(player.y - this.height * 0.5, 0, this.loco.worldH - this.height);
 
     ctx.save();
-    ctx.fillStyle = "#152243";
+    ctx.fillStyle = "#111a33";
     ctx.fillRect(0, 0, this.width, this.height);
 
-    ctx.strokeStyle = "rgba(255,255,255,0.06)";
-    ctx.lineWidth = 1;
-    const grid = 160;
+    const grid = 170;
     const startX = -((camX % grid));
     const startY = -((camY % grid));
+    ctx.strokeStyle = "rgba(130,180,255,0.09)";
+    ctx.lineWidth = 1;
     for (let x = startX; x < this.width; x += grid) {
       ctx.beginPath();
       ctx.moveTo(x, 0);
@@ -712,13 +970,27 @@ export class EstrellaGame {
       ctx.stroke();
     }
 
-    const roadColor = "rgba(50,76,139,0.62)";
+    const roadColor = "rgba(50,76,139,0.72)";
     ctx.fillStyle = roadColor;
-    for (let i = 0; i < 6; i += 1) {
-      const x = 120 + i * 420 - camX;
-      ctx.fillRect(x, -camY, 80, this.loco.worldH);
-      const y = 120 + i * 250 - camY;
-      ctx.fillRect(-camX, y, this.loco.worldW, 64);
+    for (let i = 0; i < 7; i += 1) {
+      const x = 120 + i * 390 - camX;
+      ctx.fillRect(x, -camY, 86, this.loco.worldH);
+      const y = 110 + i * 230 - camY;
+      ctx.fillRect(-camX, y, this.loco.worldW, 70);
+    }
+
+    for (let i = 0; i < 22; i += 1) {
+      const bx = ((i * 123) % this.loco.worldW) - camX;
+      const by = ((i * 187) % this.loco.worldH) - camY;
+      if (bx < -40 || bx > this.width + 40 || by < -40 || by > this.height + 40) {
+        continue;
+      }
+      ctx.fillStyle = "rgba(29,51,95,0.85)";
+      drawRoundedRect(ctx, bx - 26, by - 22, 52, 44, 8);
+      ctx.fill();
+      ctx.fillStyle = "rgba(113,214,255,0.35)";
+      ctx.fillRect(bx - 18, by - 12, 36, 6);
+      ctx.fillRect(bx - 18, by + 1, 24, 6);
     }
 
     for (const prop of this.loco.props) {
@@ -744,6 +1016,17 @@ export class EstrellaGame {
         ctx.lineTo(x + 16, y + 16);
         ctx.closePath();
         ctx.fill();
+      } else if (prop.type === "drone") {
+        ctx.fillStyle = "#ff77f4";
+        drawRoundedRect(ctx, x - 16, y - 8, 32, 16, 8);
+        ctx.fill();
+        ctx.fillStyle = "rgba(255,190,250,0.8)";
+        ctx.beginPath();
+        ctx.arc(x - 16, y, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.arc(x + 16, y, 6, 0, Math.PI * 2);
+        ctx.fill();
       } else {
         ctx.fillStyle = "#ffd166";
         drawStar(ctx, x, y - 8, 14, 7, 5);
@@ -760,10 +1043,9 @@ export class EstrellaGame {
       player.y - camY,
       this.carScale() * 0.95,
       this.getSelectedCar(),
-      getPlateName(this.profile, this.stars + this.crashes),
+      this.getDriverName(),
       player.heading
     );
-
     ctx.restore();
   }
 
@@ -786,9 +1068,10 @@ export class EstrellaGame {
     ctx.globalAlpha = 1;
   }
 
-  drawCar(ctx, x, y, scale, car, plateText, heading = 0) {
+  drawCar(ctx, x, y, scale, car, plateText, heading = 0, options = {}) {
     const width = 78 * scale;
     const height = 118 * scale;
+    const enemy = options.enemy === true;
 
     ctx.save();
     ctx.translate(x, y);
@@ -805,7 +1088,7 @@ export class EstrellaGame {
     drawRoundedRect(ctx, -width * 0.22, -height * 0.44, width * 0.44, height * 0.84, 12 * scale);
     ctx.fill();
 
-    ctx.fillStyle = "#171d35";
+    ctx.fillStyle = enemy ? "#2c0f15" : "#171d35";
     drawRoundedRect(ctx, -width * 0.27, -height * 0.24, width * 0.54, height * 0.24, 10 * scale);
     ctx.fill();
 
@@ -823,23 +1106,46 @@ export class EstrellaGame {
     drawRoundedRect(ctx, width * 0.42, height * 0.1, width * 0.18, height * 0.24, 6 * scale);
     ctx.fill();
 
-    ctx.fillStyle = "#f4f8ff";
-    drawRoundedRect(ctx, -width * 0.3, height * 0.22, width * 0.6, height * 0.16, 6 * scale);
-    ctx.fill();
-    ctx.fillStyle = "#1d2d4a";
-    ctx.font = `bold ${Math.max(8, 11 * scale)}px Arial`;
-    ctx.textAlign = "center";
-    ctx.fillText(String(plateText || "STAR"), 0, height * 0.33);
+    if (enemy) {
+      ctx.fillStyle = "rgba(255,92,92,0.85)";
+      drawRoundedRect(ctx, -width * 0.28, height * 0.22, width * 0.56, height * 0.16, 6 * scale);
+      ctx.fill();
+      ctx.fillStyle = "#18070d";
+      ctx.font = `bold ${Math.max(8, 10 * scale)}px Arial`;
+      ctx.textAlign = "center";
+      ctx.fillText(options.badge || "VX", 0, height * 0.33);
 
-    ctx.fillStyle = "#fff5b8";
-    ctx.beginPath();
-    ctx.arc(-width * 0.2, -height * 0.08, 4 * scale, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.arc(width * 0.2, -height * 0.08, 4 * scale, 0, Math.PI * 2);
-    ctx.fill();
+      ctx.fillStyle = "#ff8a8a";
+      ctx.beginPath();
+      ctx.arc(-width * 0.2, -height * 0.08, 4 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(width * 0.2, -height * 0.08, 4 * scale, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = "#f4f8ff";
+      drawRoundedRect(ctx, -width * 0.3, height * 0.22, width * 0.6, height * 0.16, 6 * scale);
+      ctx.fill();
+      ctx.fillStyle = "#1d2d4a";
+      ctx.font = `bold ${Math.max(8, 11 * scale)}px Arial`;
+      ctx.textAlign = "center";
+      ctx.fillText(String(plateText || "STAR"), 0, height * 0.33);
 
+      ctx.fillStyle = "#fff5b8";
+      ctx.beginPath();
+      ctx.arc(-width * 0.2, -height * 0.08, 4 * scale, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(width * 0.2, -height * 0.08, 4 * scale, 0, Math.PI * 2);
+      ctx.fill();
+    }
     ctx.restore();
+  }
+
+  computeSrs() {
+    const speedScore = this.mode === "race" ? this.race.speed : Math.hypot(this.loco.player.vx, this.loco.player.vy) * 0.7;
+    const srs = this.score / 55 + this.combo * 11 + this.stars * 3 + speedScore * 0.05;
+    return Math.max(0, Math.floor(srs));
   }
 
   getSnapshot() {
@@ -849,8 +1155,14 @@ export class EstrellaGame {
       score: Math.floor(this.score),
       stars: this.stars,
       combo: Math.max(1, Math.floor(this.combo)),
-      plate: getPlateName(this.profile, this.stars + this.crashes),
-      missionKey: this.mode === "race" ? "raceMission" : "locoMission"
+      plate: this.getDriverName(),
+      missionKey: this.mode === "race" ? "raceMission" : "locoMission",
+      timer: this.timeElapsed,
+      fuel: Math.round(this.fuel),
+      srs: this.computeSrs(),
+      flashEventKey: this.flashEventKey,
+      scorePulse: this.scorePulse > 0,
+      srsPulse: this.srsPulse > 0
     };
   }
 }

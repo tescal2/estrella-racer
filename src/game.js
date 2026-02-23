@@ -514,9 +514,72 @@ function buildPoliceCar(){
   const tex=new THREE.CanvasTexture(sc);
   const decal=new THREE.Mesh(new THREE.PlaneGeometry(0.8,0.25),new THREE.MeshBasicMaterial({map:tex}));
   decal.position.set(0,0.75,CAR_LEN/2+0.02); g.add(decal);
+  // "CHICAGO POLICE" on rear
+  const rc=document.createElement("canvas");rc.width=128;rc.height=24;
+  const rx=rc.getContext("2d");
+  rx.fillStyle="#87CEEB";rx.fillRect(0,0,128,24);
+  rx.fillStyle="#fff";rx.font="bold 10px sans-serif";rx.textAlign="center";
+  rx.fillText("CHICAGO POLICE",64,16);
+  const rTex=new THREE.CanvasTexture(rc);
+  const rDecal=new THREE.Mesh(new THREE.PlaneGeometry(1.2,0.22),new THREE.MeshBasicMaterial({map:rTex}));
+  rDecal.position.set(0,0.75,-CAR_LEN/2-0.02);rDecal.rotation.y=Math.PI; g.add(rDecal);
   g.userData.isPolice=true;
   return g;
 }
+
+function buildAmbulance(){
+  const g = new THREE.Group();
+  const wh=new THREE.MeshPhongMaterial({color:0xffffff,shininess:100});
+  // Larger box body
+  const body=new THREE.Mesh(new THREE.BoxGeometry(2.6,1.6,5),wh);
+  body.position.set(0,1.05,0);body.castShadow=true; g.add(body);
+  // Chassis
+  const ch=new THREE.Mesh(new THREE.BoxGeometry(2.7,0.25,5.2),new THREE.MeshPhongMaterial({color:0x111111}));
+  ch.position.y=0.25; g.add(ch);
+  // Red stripe
+  const stripe=new THREE.MeshPhongMaterial({color:0xff0000});
+  const s1=new THREE.Mesh(new THREE.BoxGeometry(2.62,0.25,5.02),stripe);
+  s1.position.set(0,1.1,0); g.add(s1);
+  // Cab/windshield
+  const cab=new THREE.Mesh(new THREE.BoxGeometry(2.2,0.9,1.2),
+    new THREE.MeshPhongMaterial({color:0x88ccff,transparent:true,opacity:0.4}));
+  cab.position.set(0,2.0,1.6); g.add(cab);
+  // Light bar
+  const bar=new THREE.Mesh(new THREE.BoxGeometry(1.8,0.12,0.8),new THREE.MeshPhongMaterial({color:0x333333}));
+  bar.position.set(0,2.55,1.3); g.add(bar);
+  const rl=new THREE.Mesh(new THREE.SphereGeometry(0.15,6,6),
+    new THREE.MeshPhongMaterial({color:0xff0000,emissive:0xff0000,emissiveIntensity:1}));
+  rl.position.set(-0.4,2.7,1.3);rl.name="policeRed"; g.add(rl);
+  const bl=new THREE.Mesh(new THREE.SphereGeometry(0.15,6,6),
+    new THREE.MeshPhongMaterial({color:0x2196f3,emissive:0x2196f3,emissiveIntensity:1}));
+  bl.position.set(0.4,2.7,1.3);bl.name="policeBlue"; g.add(bl);
+  // Wheels (bigger)
+  const tg=new THREE.CylinderGeometry(0.45,0.45,0.35,16);
+  const tm=new THREE.MeshPhongMaterial({color:0x1a1a1a});
+  [[-1.3,0.45,1.5],[-1.3,0.45,-1.5],[1.3,0.45,1.5],[1.3,0.45,-1.5]].forEach(p=>{
+    const t=new THREE.Mesh(tg,tm);t.rotation.z=Math.PI/2;t.position.set(p[0],p[1],p[2]);g.add(t);
+  });
+  // Cross symbol on sides
+  const cross=new THREE.MeshPhongMaterial({color:0xff0000,emissive:0x880000,emissiveIntensity:0.3});
+  [-1.31,1.31].forEach(x=>{
+    const h=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.5,0.2),cross);
+    h.position.set(x,1.4,-0.5); g.add(h);
+    const v=new THREE.Mesh(new THREE.BoxGeometry(0.05,0.2,0.5),cross);
+    v.position.set(x,1.4,-0.5); g.add(v);
+  });
+  // AMBULANCE text on back
+  const ac=document.createElement("canvas");ac.width=128;ac.height=24;
+  const ax=ac.getContext("2d");
+  ax.fillStyle="#fff";ax.fillRect(0,0,128,24);
+  ax.fillStyle="#ff0000";ax.font="bold 10px sans-serif";ax.textAlign="center";
+  ax.fillText("AMBULANCE",64,16);
+  const aTex=new THREE.CanvasTexture(ac);
+  const aDecal=new THREE.Mesh(new THREE.PlaneGeometry(1.4,0.25),new THREE.MeshBasicMaterial({map:aTex}));
+  aDecal.position.set(0,1.5,-2.52);aDecal.rotation.y=Math.PI; g.add(aDecal);
+  g.userData.isPolice=true; // reuse flashing light logic
+  return g;
+}
+
 /* 3D Pickups */
 function buildGasCan(){
   const g = new THREE.Group();
@@ -1175,36 +1238,55 @@ function makeRoadTexture(){
   return tex;
 }
 
-/* Silhouette sprite - large and glowing */
+/* Helicopter pulling banner message across sky */
 function buildSkyMessage(who){
-  const cnv=document.createElement("canvas");cnv.width=1024;cnv.height=256;
-  const ctx=cnv.getContext("2d");
+  const g = new THREE.Group();
   const name=who==="jade"?"Jade":"Axel";
   const color=who==="jade"?"#e91e63":"#1565c0";
-  const lightColor=who==="jade"?"#f48fb1":"#64b5f6";
-  // Outer glow
-  ctx.shadowColor=color;
-  ctx.shadowBlur=40;
+  // Helicopter body
+  const heli=new THREE.Group();
+  const fuselage=new THREE.Mesh(new THREE.SphereGeometry(1.2,8,6),
+    new THREE.MeshPhongMaterial({color:0x37474f,shininess:80}));
+  fuselage.scale.set(1,0.7,1.8); heli.add(fuselage);
+  const tail=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.25,3,6),
+    new THREE.MeshPhongMaterial({color:0x455a64}));
+  tail.rotation.z=Math.PI/2;tail.position.set(0,0.1,-2.5); heli.add(tail);
+  const tailRotor=new THREE.Mesh(new THREE.BoxGeometry(0.08,1.2,0.04),
+    new THREE.MeshPhongMaterial({color:0x222222}));
+  tailRotor.position.set(0,0.1,-3.8);tailRotor.name="tailRotor"; heli.add(tailRotor);
+  const rotor=new THREE.Mesh(new THREE.BoxGeometry(5,0.06,0.3),
+    new THREE.MeshPhongMaterial({color:0x222222,transparent:true,opacity:0.6}));
+  rotor.position.y=1.0;rotor.name="mainRotor"; heli.add(rotor);
+  const mast=new THREE.Mesh(new THREE.CylinderGeometry(0.08,0.08,0.5,6),
+    new THREE.MeshPhongMaterial({color:0x333333}));
+  mast.position.y=0.65; heli.add(mast);
+  [-0.6,0.6].forEach(x=>{
+    const skid=new THREE.Mesh(new THREE.CylinderGeometry(0.04,0.04,2.5,4),
+      new THREE.MeshPhongMaterial({color:0x666666}));
+    skid.rotation.z=Math.PI/2;skid.rotation.y=Math.PI/2;
+    skid.position.set(x,-0.9,0); heli.add(skid);
+  });
+  heli.position.set(15,0,0); g.add(heli);
+  // Tow rope
+  const rope=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,5,4),
+    new THREE.MeshPhongMaterial({color:0x888888}));
+  rope.position.set(3,-2.5,0);rope.rotation.z=0.4; g.add(rope);
+  // Banner
+  const cnv=document.createElement("canvas");cnv.width=1024;cnv.height=192;
+  const ctx=cnv.getContext("2d");
+  ctx.fillStyle=who==="jade"?"#fff0f5":"#e3f2fd";
+  ctx.fillRect(0,0,1024,192);
+  ctx.strokeStyle=color;ctx.lineWidth=6;ctx.strokeRect(3,3,1018,186);
   ctx.fillStyle=color;
-  ctx.font="bold 120px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";
-  ctx.fillText("Go "+name+" Go!",512,128);
-  // Second pass brighter
-  ctx.shadowBlur=20;
-  ctx.fillText("Go "+name+" Go!",512,128);
-  ctx.shadowBlur=0;
-  // Glossy shine overlay - gradient from top
-  const gloss=ctx.createLinearGradient(0,60,0,180);
-  gloss.addColorStop(0,"rgba(255,255,255,0.35)");
-  gloss.addColorStop(0.45,"rgba(255,255,255,0.1)");
-  gloss.addColorStop(0.55,"rgba(255,255,255,0)");
-  gloss.addColorStop(1,"rgba(255,255,255,0)");
-  ctx.fillStyle=gloss;
-  ctx.fillText("Go "+name+" Go!",512,128);
+  ctx.font="bold 100px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";
+  ctx.fillText("GO "+name.toUpperCase()+" GO!",512,100);
+  ctx.font="80px sans-serif";
+  ctx.fillText("\u2B50",80,100);ctx.fillText("\u2B50",944,100);
   const tex=new THREE.CanvasTexture(cnv);
-  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,opacity:1.0});
-  const spr=new THREE.Sprite(mat);
-  spr.scale.set(40,10,1);
-  return spr;
+  const bannerMat=new THREE.MeshBasicMaterial({map:tex,side:THREE.DoubleSide});
+  const banner=new THREE.Mesh(new THREE.PlaneGeometry(30,5.5),bannerMat);
+  banner.position.set(-8,-4,0); g.add(banner);
+  return g;
 }
 
 /* Happy victory music */
@@ -1488,7 +1570,7 @@ export class EstrellaGame {
     // Silhouette
     if(this.silhouette)this.scene.remove(this.silhouette);
     this.silhouette=buildSkyMessage(driver);
-    this.silhouette.position.set(0,45,-150);
+    this.silhouette.position.set(40,35,-120);
     this.scene.add(this.silhouette);
     // Finish flag (hidden, placed at end)
     if(this.finishFlag)this.scene.remove(this.finishFlag);
@@ -1538,7 +1620,8 @@ export class EstrellaGame {
     // Spawn enemies
     if(this.spawnCooldown<=0&&Math.random()<cfg.spawnRate){
       const lane=Math.floor(Math.random()*cfg.lanes);
-      const enemy=Math.random()<0.15?buildPoliceCar():buildEnemyCar();
+      const rnd=Math.random();
+      const enemy=rnd<0.12?buildPoliceCar():rnd<0.2?buildAmbulance():buildEnemyCar();
       enemy.position.set(this._laneX(lane),0,-ROAD_LEN/2+Math.random()*50);
       enemy.userData.speed=effectiveSpeed*(0.5+Math.random()*0.3);
       this.scene.add(enemy);this.obstacles.push(enemy);
@@ -1589,11 +1672,11 @@ export class EstrellaGame {
         }
         else if(type==="mushroom"){
           sfx.mushroomSound();this._bigMode=5;
-          // Scale only the driver character, not the car
+          // Raise driver up out of the car, make torso taller
           if(this.playerCar){
             this.playerCar.traverse(c=>{
-              if(c.name==="driverHead")c.scale.set(2.2,2.2,2.2);
-              if(c.name==="driverTorso"){c.scale.set(2,2.5,2);c.position.y+=0.4;}
+              if(c.name==="driverHead"){c.position.y=2.3;c.scale.set(1.3,1.3,1.3);}
+              if(c.name==="driverTorso"){c.position.y=1.7;c.scale.set(1.4,2.0,1.4);}
             });
           }
         }
@@ -1618,8 +1701,8 @@ export class EstrellaGame {
       this._bigMode-=dt;
       if(this._bigMode<=0&&this.playerCar){
         this.playerCar.traverse(c=>{
-          if(c.name==="driverHead")c.scale.set(1,1,1);
-          if(c.name==="driverTorso"){c.scale.set(1,1,1);c.position.y=1.25;}
+          if(c.name==="driverHead"){c.position.y=1.65;c.scale.set(1,1,1);}
+          if(c.name==="driverTorso"){c.position.y=1.25;c.scale.set(1,1,1);}
         });
       }
     }
@@ -1642,7 +1725,15 @@ export class EstrellaGame {
     }
     this.camera.position.x+=(this.playerCar.position.x*0.3-this.camera.position.x)*0.05;
     this.camera.position.y=6+this.jumpY*0.4;
-    if(this.silhouette)this.silhouette.position.y=45+Math.sin(Date.now()*0.001)*3;
+    if(this.silhouette){
+      this.silhouette.position.x-=dt*8;
+      if(this.silhouette.position.x<-60) this.silhouette.position.x=60;
+      this.silhouette.position.y=35+Math.sin(Date.now()*0.001)*2;
+      this.silhouette.traverse(c=>{
+        if(c.name==="mainRotor")c.rotation.y+=dt*25;
+        if(c.name==="tailRotor")c.rotation.x+=dt*30;
+      });
+    }
     // Finish line at 98%
     if(this.dist>=this.goalDist*0.98&&!this.finishFlag){
       this.finishFlag=buildFinishFlag();
@@ -1695,7 +1786,15 @@ export class EstrellaGame {
     else if(this.playerCar)this.playerCar.visible=true;
     sfx.engine(effectiveSpeed);
     this.camera.position.x+=(this.playerCar.position.x*0.3-this.camera.position.x)*0.05;
-    if(this.silhouette)this.silhouette.position.y=45+Math.sin(Date.now()*0.001)*3;
+    if(this.silhouette){
+      this.silhouette.position.x-=dt*8;
+      if(this.silhouette.position.x<-60) this.silhouette.position.x=60;
+      this.silhouette.position.y=35+Math.sin(Date.now()*0.001)*2;
+      this.silhouette.traverse(c=>{
+        if(c.name==="mainRotor")c.rotation.y+=dt*25;
+        if(c.name==="tailRotor")c.rotation.x+=dt*30;
+      });
+    }
     this.skyline.willis.traverse(c=>{if(c.name==="blink")c.material.emissiveIntensity=.5+.5*Math.sin(Date.now()*.003);});
     this.renderer.render(this.scene,this.camera);
   }
@@ -1807,8 +1906,13 @@ export class EstrellaGame {
     this.camera.lookAt(0,2,0);
     // Silhouette celebration glow
     if(this.silhouette){
-      this.silhouette.position.y=45+Math.sin(t*2)*5;
-      this.silhouette.material.opacity=0.5+Math.sin(t*3)*0.3;
+      this.silhouette.position.y=35+Math.sin(t*2)*3;
+      this.silhouette.position.x-=dt*5;
+      if(this.silhouette.position.x<-60) this.silhouette.position.x=60;
+      this.silhouette.traverse(c=>{
+        if(c.name==="mainRotor")c.rotation.y+=dt*25;
+        if(c.name==="tailRotor")c.rotation.x+=dt*30;
+      });
     }
     this.skyline.willis.traverse(c=>{if(c.name==="blink")c.material.emissiveIntensity=.5+.5*Math.sin(t*4);});
     // Animate confetti falling

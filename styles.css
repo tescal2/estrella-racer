@@ -39,8 +39,10 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0a0e2a;font-family:
 #hud{position:absolute;top:env(safe-area-inset-top,4px);left:8px;right:8px;display:flex;flex-direction:column;gap:4px;pointer-events:none}
 #hud *{pointer-events:auto}
 #hudRow{display:flex;justify-content:space-between;font-size:15px;font-weight:700;text-shadow:0 1px 4px rgba(0,0,0,.7)}
-#progressWrap{height:4px;background:rgba(255,255,255,.15);border-radius:2px;overflow:hidden}
-#progressBar{height:100%;width:0%;background:linear-gradient(90deg,#ffe14d,#ff6b35);transition:width .3s}
+#progressWrap{position:relative;height:30px}
+#progressSvg{width:100%;height:30px}
+#progressPath{stroke-dasharray:400;stroke-dashoffset:400;transition:stroke-dashoffset .3s}
+#progressLabel{position:absolute;right:4px;top:2px;font-size:11px;font-weight:700;color:#ffe14d;text-shadow:0 1px 3px rgba(0,0,0,.8)}
 #hudFlash{text-align:center;font-size:18px;font-weight:800;color:#ffe14d;text-shadow:0 0 12px rgba(255,225,77,.5);animation:flashIn .4s ease-out}
 @keyframes flashIn{0%{transform:scale(2);opacity:0}100%{transform:scale(1);opacity:1}}
 #hudBtns{display:flex;gap:8px;align-self:flex-end}

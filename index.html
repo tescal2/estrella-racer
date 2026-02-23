@@ -57,7 +57,16 @@
         <span id="hudScore">⭐ 0</span>
         <span id="hudFuel">⛽ 100%</span>
       </div>
-      <div id="progressWrap"><div id="progressBar"></div></div>
+      <div id="progressWrap">
+        <svg id="progressSvg" viewBox="0 0 300 30" preserveAspectRatio="none">
+          <path id="progressBg" d="M5,25 C50,5 100,25 150,10 C200,-5 250,20 295,8" fill="none" stroke="rgba(255,255,255,0.15)" stroke-width="4" stroke-linecap="round"/>
+          <path id="progressPath" d="M5,25 C50,5 100,25 150,10 C200,-5 250,20 295,8" fill="none" stroke="url(#progGrad)" stroke-width="4" stroke-linecap="round"/>
+          <defs><linearGradient id="progGrad"><stop offset="0%" stop-color="#ffe14d"/><stop offset="100%" stop-color="#ff6b35"/></linearGradient></defs>
+          <circle id="progressDot" r="5" fill="#ffe14d" filter="url(#glow)"/>
+          <defs><filter id="glow"><feGaussianBlur stdDeviation="2" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+        </svg>
+        <div id="progressLabel">0%</div>
+      </div>
       <div id="hudFlash" class="hidden"></div>
       <div id="hudBtns">
         <button id="pauseBtn" class="iconBtn">⏸</button>

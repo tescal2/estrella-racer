@@ -68,7 +68,22 @@ function updateHUD(){
   $("hudScore").textContent = "\u2B50 " + Math.floor(game.score);
   $("hudFuel").textContent = "\u26FD " + Math.floor(game.fuel) + "%";
   const pct = Math.min(100, (game.dist / game.goalDist) * 100);
-  $("progressBar").style.width = pct + "%";
+  // Curved SVG progress
+  const path = $("progressPath");
+  if(path){
+    const len = path.getTotalLength ? path.getTotalLength() : 400;
+    path.style.strokeDasharray = len;
+    path.style.strokeDashoffset = len * (1 - pct/100);
+    // Move dot along path
+    const dot = $("progressDot");
+    if(dot && path.getPointAtLength){
+      const pt = path.getPointAtLength(len * pct/100);
+      dot.setAttribute("cx", pt.x);
+      dot.setAttribute("cy", pt.y);
+    }
+  }
+  const label = $("progressLabel");
+  if(label) label.textContent = Math.floor(pct) + "%";
 }
 
 /* Crash callback */
@@ -125,7 +140,7 @@ $("muteBtn").addEventListener("click", () => {
 function handleTilt(e){
   const gamma = e.gamma ?? 0;
   const beta = e.beta ?? 0;
-  game.tiltSide = -(gamma) / 25;
+  game.tiltSide = (gamma) / 25;
   game.tiltFwd = Math.max(-1, Math.min(1, (beta - 40) / 30));
 }
 

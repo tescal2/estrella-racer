@@ -1,8 +1,7 @@
-/* Estrella Racer - Three.js 3D engine v5 */
+/* Estrella Racer - Three.js 3D engine v6 */
 
 const LANE_W = 3.2;
-const CAR_LEN = 3.5;
-const SPAWN_GAP = 28;
+const CAR_LEN = 3.8;
 const ROAD_W = 22;
 const ROAD_LEN = 600;
 
@@ -17,8 +16,7 @@ class SoundFX {
       o.type="sine";o.frequency.value=80;
       g.gain.setValueAtTime(.4,c.currentTime);
       g.gain.exponentialRampToValueAtTime(.01,c.currentTime+.3);
-      o.connect(g);g.connect(c.destination);
-      o.start();o.stop(c.currentTime+.3);
+      o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.3);
       const buf=c.createBuffer(1,c.sampleRate*.15,c.sampleRate);
       const d=buf.getChannelData(0);
       for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*.5;
@@ -57,6 +55,32 @@ class SoundFX {
       g.gain.setValueAtTime(.15,c.currentTime);
       g.gain.exponentialRampToValueAtTime(.01,c.currentTime+.4);
       o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.4);
+    });
+  }
+  jump(){
+    this._play(c=>{
+      const o=c.createOscillator(),g=c.createGain();
+      o.type="sine";o.frequency.setValueAtTime(200,c.currentTime);
+      o.frequency.exponentialRampToValueAtTime(600,c.currentTime+.15);
+      g.gain.setValueAtTime(.2,c.currentTime);
+      g.gain.exponentialRampToValueAtTime(.01,c.currentTime+.2);
+      o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.2);
+    });
+  }
+  thud(){
+    this._play(c=>{
+      const o=c.createOscillator(),g=c.createGain();
+      o.type="sine";o.frequency.value=50;
+      g.gain.setValueAtTime(.5,c.currentTime);
+      g.gain.exponentialRampToValueAtTime(.01,c.currentTime+.15);
+      o.connect(g);g.connect(c.destination);o.start();o.stop(c.currentTime+.15);
+      const buf=c.createBuffer(1,c.sampleRate*.08,c.sampleRate);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*.3;
+      const n=c.createBufferSource(),ng=c.createGain();
+      n.buffer=buf;ng.gain.setValueAtTime(.25,c.currentTime);
+      ng.gain.exponentialRampToValueAtTime(.01,c.currentTime+.08);
+      n.connect(ng);ng.connect(c.destination);n.start();
     });
   }
   engine(speed){
@@ -103,19 +127,15 @@ export function drawAvatar(canvas, who){
   const ctx=canvas.getContext("2d");
   const w=canvas.width, h=canvas.height;
   ctx.clearRect(0,0,w,h);
-  // Background gradient
   const bg=ctx.createLinearGradient(0,0,0,h);
   bg.addColorStop(0,"#1a237e"); bg.addColorStop(1,"#0d47a1");
   ctx.fillStyle=bg; ctx.fillRect(0,0,w,h);
   const cx=w/2, cy=h*.38;
-  // Warm skin tone from photo analysis
   const skin = who==="jade" ? "#c8956e" : "#b5845e";
   const hair = who==="jade" ? "#1a1008" : "#0f0a05";
   const hairLen = who==="jade" ? 52 : 18;
-  // Head
   ctx.fillStyle=skin;
   ctx.beginPath(); ctx.ellipse(cx,cy,32,38,0,0,Math.PI*2); ctx.fill();
-  // Hair
   ctx.fillStyle=hair;
   if(who==="jade"){
     ctx.beginPath(); ctx.ellipse(cx,cy-12,35,30,0,Math.PI,0); ctx.fill();
@@ -126,7 +146,6 @@ export function drawAvatar(canvas, who){
     ctx.fillRect(cx-32,cy-16,8,hairLen);
     ctx.fillRect(cx+24,cy-16,8,hairLen);
   }
-  // Eyes
   ctx.fillStyle="#fff";
   ctx.beginPath(); ctx.ellipse(cx-11,cy,7,6,0,0,Math.PI*2); ctx.fill();
   ctx.beginPath(); ctx.ellipse(cx+11,cy,7,6,0,0,Math.PI*2); ctx.fill();
@@ -136,21 +155,15 @@ export function drawAvatar(canvas, who){
   ctx.fillStyle="#000";
   ctx.beginPath(); ctx.arc(cx-10,cy+1,1.8,0,Math.PI*2); ctx.fill();
   ctx.beginPath(); ctx.arc(cx+12,cy+1,1.8,0,Math.PI*2); ctx.fill();
-  // Eyebrows
   ctx.strokeStyle=hair; ctx.lineWidth=2.5;
   ctx.beginPath(); ctx.moveTo(cx-18,cy-10); ctx.quadraticCurveTo(cx-11,cy-14,cx-4,cy-10); ctx.stroke();
   ctx.beginPath(); ctx.moveTo(cx+4,cy-10); ctx.quadraticCurveTo(cx+11,cy-14,cx+18,cy-10); ctx.stroke();
-  // Nose
   ctx.strokeStyle=skin; ctx.lineWidth=1.5; ctx.globalAlpha=.6;
   ctx.beginPath(); ctx.moveTo(cx,cy+4); ctx.quadraticCurveTo(cx+4,cy+12,cx,cy+14); ctx.stroke();
   ctx.globalAlpha=1;
-  // Smile
   ctx.strokeStyle="#c0604a"; ctx.lineWidth=2;
   ctx.beginPath(); ctx.arc(cx,cy+14,10,0.1*Math.PI,0.9*Math.PI); ctx.stroke();
-  // Neck
-  ctx.fillStyle=skin;
-  ctx.fillRect(cx-8,cy+34,16,14);
-  // Body / shirt
+  ctx.fillStyle=skin; ctx.fillRect(cx-8,cy+34,16,14);
   const shirtColor = who==="jade" ? "#e91e63" : "#1565c0";
   ctx.fillStyle=shirtColor;
   ctx.beginPath();
@@ -158,89 +171,151 @@ export function drawAvatar(canvas, who){
   ctx.lineTo(cx+8,cy+48);
   ctx.quadraticCurveTo(cx+36,cy+48,cx+36,h);
   ctx.closePath(); ctx.fill();
-  // Stars on shirt
   ctx.fillStyle="#ffe14d"; ctx.font="14px sans-serif";
   ctx.fillText("\u2B50",cx-8,cy+68);
 }
 
-/* 3D Car builder */
+/* 3D Car builder - more realistic */
 function buildCar(color, isPlayer){
   const g = new THREE.Group();
-  // Body
-  const bodyGeo = new THREE.BoxGeometry(2.2, 0.8, CAR_LEN);
-  const bodyMat = new THREE.MeshPhongMaterial({color:new THREE.Color(color)});
-  const body = new THREE.Mesh(bodyGeo, bodyMat);
-  body.position.y = 0.6;
-  body.castShadow = true;
-  body.name = "body";
-  g.add(body);
-  // Cabin
-  const cabGeo = new THREE.BoxGeometry(1.8, 0.7, 1.8);
-  const cabMat = new THREE.MeshPhongMaterial({color:0x88ccff, transparent:true, opacity:0.6});
+  const col = new THREE.Color(color);
+  const mat = new THREE.MeshPhongMaterial({color:col, shininess:80});
+  // Lower chassis
+  const chassis = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.25, CAR_LEN), new THREE.MeshPhongMaterial({color:0x111111}));
+  chassis.position.y = 0.25; g.add(chassis);
+  // Main body - tapered with hood and trunk
+  const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.55, CAR_LEN*0.9), mat);
+  body.position.y = 0.65; body.castShadow=true; body.name="body"; g.add(body);
+  // Hood (front) - angled
+  const hood = new THREE.Mesh(new THREE.BoxGeometry(2.0, 0.15, 1.2), mat);
+  hood.position.set(0, 0.98, 1.1); hood.rotation.x=-0.1; g.add(hood);
+  // Trunk (rear)
+  const trunk = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.15, 0.9), mat);
+  trunk.position.set(0, 0.92, -1.3); g.add(trunk);
+  // Cabin - windshield style
+  const cabGeo = new THREE.BoxGeometry(1.8, 0.65, 1.6);
+  const cabMat = new THREE.MeshPhongMaterial({color:0x88ccff, transparent:true, opacity:0.5, shininess:100});
   const cab = new THREE.Mesh(cabGeo, cabMat);
-  cab.position.set(0, 1.15, -0.2);
-  cab.name = "cabin";
-  g.add(cab);
-  // Wheels
-  const wGeo = new THREE.CylinderGeometry(0.35, 0.35, 0.25, 12);
-  const wMat = new THREE.MeshPhongMaterial({color:0x222222});
-  const positions = [[-1.15,0.35,1],[-1.15,0.35,-1],[1.15,0.35,1],[1.15,0.35,-1]];
-  positions.forEach(p=>{
-    const w = new THREE.Mesh(wGeo, wMat);
-    w.rotation.z = Math.PI/2;
-    w.position.set(p[0],p[1],p[2]);
-    w.name = "wheel";
-    g.add(w);
-    // Hubcap
-    const hGeo = new THREE.CircleGeometry(0.2, 8);
-    const hMat = new THREE.MeshPhongMaterial({color:0xcccccc});
-    const hub = new THREE.Mesh(hGeo, hMat);
-    hub.position.set(p[0]+(p[0]>0?0.13:-0.13),p[1],p[2]);
-    hub.rotation.y = p[0]>0 ? Math.PI/2 : -Math.PI/2;
-    g.add(hub);
+  cab.position.set(0, 1.25, -0.1); cab.name="cabin"; g.add(cab);
+  // Windshield front (angled)
+  const wsGeo = new THREE.PlaneGeometry(1.7, 0.7);
+  const wsMat = new THREE.MeshPhongMaterial({color:0xaaddff, transparent:true, opacity:0.4, side:THREE.DoubleSide});
+  const ws = new THREE.Mesh(wsGeo, wsMat);
+  ws.position.set(0, 1.25, 0.75); ws.rotation.x=0.3; g.add(ws);
+  // Fenders over wheels
+  const fMat = new THREE.MeshPhongMaterial({color:col.clone().multiplyScalar(0.85)});
+  [[-1.15,1],[-1.15,-1],[1.15,1],[1.15,-1]].forEach(p=>{
+    const fender = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.2, 0.9), fMat);
+    fender.position.set(p[0], 0.5, p[1]); g.add(fender);
+  });
+  // Wheels with tires and rims
+  const tireGeo = new THREE.CylinderGeometry(0.38, 0.38, 0.28, 16);
+  const tireMat = new THREE.MeshPhongMaterial({color:0x1a1a1a});
+  const rimGeo = new THREE.CylinderGeometry(0.22, 0.22, 0.30, 12);
+  const rimMat = new THREE.MeshPhongMaterial({color:0xcccccc, shininess:100});
+  [[-1.15,0.38,1.2],[-1.15,0.38,-1.2],[1.15,0.38,1.2],[1.15,0.38,-1.2]].forEach(p=>{
+    const tire = new THREE.Mesh(tireGeo, tireMat);
+    tire.rotation.z=Math.PI/2; tire.position.set(p[0],p[1],p[2]); tire.name="wheel"; g.add(tire);
+    const rim = new THREE.Mesh(rimGeo, rimMat);
+    rim.rotation.z=Math.PI/2; rim.position.set(p[0],p[1],p[2]); g.add(rim);
   });
   if(isPlayer){
     // Spoiler
-    const spGeo = new THREE.BoxGeometry(2.4, 0.08, 0.4);
-    const spMat = new THREE.MeshPhongMaterial({color:new THREE.Color(color).multiplyScalar(0.7)});
-    const sp = new THREE.Mesh(spGeo, spMat);
-    sp.position.set(0, 1.3, -1.5);
-    sp.name = "spoiler";
-    g.add(sp);
+    const spPost = new THREE.Mesh(new THREE.BoxGeometry(0.08,0.4,0.08), fMat);
+    [-.8,.8].forEach(x=>{ const s=spPost.clone(); s.position.set(x,1.15,-1.6); g.add(s); });
+    const spWing = new THREE.Mesh(new THREE.BoxGeometry(2.4,0.06,0.35), fMat);
+    spWing.position.set(0,1.38,-1.6); spWing.name="spoiler"; g.add(spWing);
     // Headlights
-    const hlGeo = new THREE.SphereGeometry(0.15, 8, 8);
-    const hlMat = new THREE.MeshPhongMaterial({color:0xffffaa, emissive:0xffff88, emissiveIntensity:0.8});
-    [-0.7,0.7].forEach(x=>{
+    const hlGeo = new THREE.SphereGeometry(0.18, 8, 8);
+    const hlMat = new THREE.MeshPhongMaterial({color:0xffffcc, emissive:0xffff88, emissiveIntensity:0.9});
+    [-0.8,0.8].forEach(x=>{
       const hl = new THREE.Mesh(hlGeo, hlMat);
-      hl.position.set(x, 0.65, CAR_LEN/2);
-      hl.name = "headlight";
-      g.add(hl);
+      hl.position.set(x, 0.65, CAR_LEN/2); hl.name="headlight"; g.add(hl);
+    });
+    // Taillights
+    const tlGeo = new THREE.SphereGeometry(0.12, 6, 6);
+    const tlMat = new THREE.MeshPhongMaterial({color:0xff0000, emissive:0xff0000, emissiveIntensity:0.6});
+    [-0.8,0.8].forEach(x=>{
+      const tl = new THREE.Mesh(tlGeo, tlMat);
+      tl.position.set(x, 0.65, -CAR_LEN/2); tl.name="taillight"; g.add(tl);
+    });
+    // Exhaust pipes
+    const exGeo = new THREE.CylinderGeometry(0.06,0.08,0.3,8);
+    const exMat = new THREE.MeshPhongMaterial({color:0x666666});
+    [-.5,.5].forEach(x=>{
+      const ex = new THREE.Mesh(exGeo, exMat);
+      ex.rotation.x=Math.PI/2; ex.position.set(x,0.3,-CAR_LEN/2-0.1); g.add(ex);
     });
   }
   return g;
 }
 
-/* Enemy car - dark fleet style */
+/* Enemy car - dark menacing fleet */
 function buildEnemyCar(){
   const colors = [0x1a1a2e, 0x16213e, 0x0f3460, 0x2d132c, 0x1b1b2f];
   const c = colors[Math.floor(Math.random()*colors.length)];
   const g = buildCar(c, false);
-  // Menacing front bumper
-  const bGeo = new THREE.BoxGeometry(2.4, 0.3, 0.2);
-  const bMat = new THREE.MeshPhongMaterial({color:0x333333});
+  const bGeo = new THREE.BoxGeometry(2.4, 0.35, 0.25);
+  const bMat = new THREE.MeshPhongMaterial({color:0x444444});
   const bumper = new THREE.Mesh(bGeo, bMat);
-  bumper.position.set(0, 0.45, CAR_LEN/2+0.1);
-  g.add(bumper);
-  // Red glow eyes
-  const eGeo = new THREE.SphereGeometry(0.1, 6, 6);
+  bumper.position.set(0, 0.45, CAR_LEN/2+0.12); g.add(bumper);
+  const eGeo = new THREE.SphereGeometry(0.12, 6, 6);
   const eMat = new THREE.MeshPhongMaterial({color:0xff0000, emissive:0xff0000, emissiveIntensity:1});
   [-0.5,0.5].forEach(x=>{
     const e = new THREE.Mesh(eGeo, eMat);
-    e.position.set(x, 0.75, CAR_LEN/2+0.05);
-    g.add(e);
+    e.position.set(x, 0.75, CAR_LEN/2+0.05); g.add(e);
   });
   return g;
 }
+/* 3D Pickups */
+function buildGasCan(){
+  const g = new THREE.Group();
+  const bodyMat = new THREE.MeshPhongMaterial({color:0xd32f2f});
+  // Can body
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.35), bodyMat);
+  body.position.y=0.5; g.add(body);
+  // Handle
+  const hMat = new THREE.MeshPhongMaterial({color:0x333333});
+  const handle = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.08, 0.08), hMat);
+  handle.position.set(0, 0.95, 0); g.add(handle);
+  const hL = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.2, 0.08), hMat);
+  hL.position.set(-0.16, 0.85, 0); g.add(hL);
+  const hR = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.2, 0.08), hMat);
+  hR.position.set(0.16, 0.85, 0); g.add(hR);
+  // Nozzle
+  const nozzle = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.06, 0.25, 6), hMat);
+  nozzle.position.set(0.25, 0.95, 0); nozzle.rotation.z=-0.5; g.add(nozzle);
+  // Label
+  const label = new THREE.Mesh(new THREE.PlaneGeometry(0.35, 0.25), new THREE.MeshPhongMaterial({color:0xffeb3b}));
+  label.position.set(0, 0.5, 0.18); g.add(label);
+  g.userData.type = "fuel";
+  return g;
+}
+
+function buildStarPickup(){
+  const g = new THREE.Group();
+  const mat = new THREE.MeshPhongMaterial({color:0xffd600, emissive:0xffab00, emissiveIntensity:0.7, shininess:100});
+  // 5-point star from merged cones
+  for(let i=0;i<5;i++){
+    const spike = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.6, 4), mat);
+    const angle = (i/5)*Math.PI*2 - Math.PI/2;
+    spike.position.set(Math.cos(angle)*0.25, Math.sin(angle)*0.25 + 0.8, 0);
+    spike.rotation.z = angle + Math.PI/2;
+    g.add(spike);
+  }
+  // Center
+  const center = new THREE.Mesh(new THREE.SphereGeometry(0.22, 8, 8), mat);
+  center.position.y = 0.8; g.add(center);
+  // Glow ring
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(0.5, 0.6, 16),
+    new THREE.MeshPhongMaterial({color:0xffe082, emissive:0xffcc02, emissiveIntensity:0.4, transparent:true, opacity:0.5, side:THREE.DoubleSide})
+  );
+  ring.position.y = 0.8; ring.rotation.x = Math.PI/2; g.add(ring);
+  g.userData.type = "star";
+  return g;
+}
+
 /* Loco mode objects */
 function buildTree(){
   const g=new THREE.Group();
@@ -290,7 +365,6 @@ function buildChicken(){
   beak.position.set(0,.88,.45);beak.rotation.x=-Math.PI/2;g.add(beak);
   const comb=new THREE.Mesh(new THREE.SphereGeometry(.08,6,6),new THREE.MeshPhongMaterial({color:0xd32f2f}));
   comb.position.set(0,1.08,.2);g.add(comb);
-  // Eyes
   const eGeo=new THREE.SphereGeometry(.04,6,6);
   const eMat=new THREE.MeshPhongMaterial({color:0x000000});
   [-.08,.08].forEach(x=>{const e=new THREE.Mesh(eGeo,eMat);e.position.set(x,.92,.38);g.add(e);});
@@ -298,38 +372,39 @@ function buildChicken(){
 }
 
 function buildRamp(){
-  const geo=new THREE.BoxGeometry(3,.4,2);
-  const mat=new THREE.MeshPhongMaterial({color:0xffd600,emissive:0xffa000,emissiveIntensity:.3});
+  const g = new THREE.Group();
+  // Ramp body - angled wedge
+  const geo=new THREE.BoxGeometry(3,.5,2.5);
+  const mat=new THREE.MeshPhongMaterial({color:0xffd600, emissive:0xffa000, emissiveIntensity:.3});
   const m=new THREE.Mesh(geo,mat);
-  m.rotation.x=.15;
-  m.position.y=.2;
-  return m;
+  m.rotation.x=.2; m.position.y=.3; g.add(m);
+  // Arrow markings
+  const arrowMat = new THREE.MeshPhongMaterial({color:0xff6f00, emissive:0xff6f00, emissiveIntensity:.5});
+  const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.5, 3), arrowMat);
+  arrow.position.set(0, 0.7, 0); arrow.rotation.x = -Math.PI/2; g.add(arrow);
+  g.userData.type = "ramp";
+  return g;
 }
-
 /* Willis Tower */
 function buildWillisTower(){
   const g=new THREE.Group();
   const mat=new THREE.MeshPhongMaterial({color:0x1a1a2e});
-  // Main tower - stepped setbacks
   const base=new THREE.Mesh(new THREE.BoxGeometry(8,35,6),mat);
   base.position.y=17.5;g.add(base);
   const mid=new THREE.Mesh(new THREE.BoxGeometry(6,10,5),mat);
   mid.position.y=40;g.add(mid);
   const top=new THREE.Mesh(new THREE.BoxGeometry(4,8,4),mat);
   top.position.y=49;g.add(top);
-  // Antennas
   const antMat=new THREE.MeshPhongMaterial({color:0x666666});
   const a1=new THREE.Mesh(new THREE.CylinderGeometry(.12,.1,20,6),antMat);
   a1.position.set(-1,63,0);g.add(a1);
   const a2=new THREE.Mesh(new THREE.CylinderGeometry(.1,.08,16,6),antMat);
   a2.position.set(1,61,0);g.add(a2);
-  // Red blinking lights at tips
   const blinkMat=new THREE.MeshPhongMaterial({color:0xff0000,emissive:0xff0000,emissiveIntensity:1});
   const b1=new THREE.Mesh(new THREE.SphereGeometry(.2,6,6),blinkMat);
   b1.position.set(-1,73,0);b1.name="blink";g.add(b1);
   const b2=new THREE.Mesh(new THREE.SphereGeometry(.18,6,6),blinkMat);
   b2.position.set(1,69,0);b2.name="blink";g.add(b2);
-  // Window glow strips
   const winMat=new THREE.MeshPhongMaterial({color:0xffecb3,emissive:0xffe082,emissiveIntensity:.5,transparent:true,opacity:.6});
   for(let y=3;y<48;y+=3){
     const win=new THREE.Mesh(new THREE.PlaneGeometry(7,.3),winMat);
@@ -338,7 +413,6 @@ function buildWillisTower(){
   return g;
 }
 
-/* Chicago skyline buildings */
 function buildSkyline(scene){
   const buildings=[];
   const configs=[
@@ -352,40 +426,31 @@ function buildSkyline(scene){
   const winMat=new THREE.MeshPhongMaterial({color:0xfff8e1,emissive:0xffe082,emissiveIntensity:.3,transparent:true,opacity:.4});
   configs.forEach(c=>{
     const b=new THREE.Mesh(new THREE.BoxGeometry(c.w,c.h,c.d),mat);
-    b.position.set(c.x,c.h/2,-250);
-    b.castShadow=true;
-    scene.add(b);
-    buildings.push(b);
-    // windows
+    b.position.set(c.x,c.h/2,-250);b.castShadow=true;
+    scene.add(b);buildings.push(b);
     for(let y=2;y<c.h-1;y+=2.5){
       const win=new THREE.Mesh(new THREE.PlaneGeometry(c.w-.5,.25),winMat);
-      win.position.set(c.x,y,-250+c.d/2+.01);
-      scene.add(win);
+      win.position.set(c.x,y,-250+c.d/2+.01);scene.add(win);
     }
   });
-  // Willis Tower center
   const willis=buildWillisTower();
-  willis.position.set(0,0,-260);
-  scene.add(willis);
+  willis.position.set(0,0,-260);scene.add(willis);
   return {buildings,willis};
 }
+
 /* Road texture */
 function makeRoadTexture(){
   const c=document.createElement("canvas");
   c.width=512;c.height=1024;
   const ctx=c.getContext("2d");
-  // Asphalt
   ctx.fillStyle="#2a2a2a";ctx.fillRect(0,0,512,1024);
-  // Add noise for realism
   for(let i=0;i<3000;i++){
     const v=Math.random()*30+30;
     ctx.fillStyle=`rgb(${v},${v},${v})`;
     ctx.fillRect(Math.random()*512,Math.random()*1024,2,2);
   }
-  // Lane markings
   ctx.strokeStyle="#fff";ctx.lineWidth=3;ctx.setLineDash([40,30]);
   [170,340].forEach(x=>{ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,1024);ctx.stroke();});
-  // Edge lines
   ctx.strokeStyle="#ff0";ctx.lineWidth=4;ctx.setLineDash([]);
   [30,482].forEach(x=>{ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,1024);ctx.stroke();});
   const tex=new THREE.CanvasTexture(c);
@@ -394,13 +459,42 @@ function makeRoadTexture(){
   return tex;
 }
 
+/* Character silhouette sprite for sky */
+function buildSilhouetteSprite(who){
+  const cnv = document.createElement("canvas");
+  cnv.width = 128; cnv.height = 192;
+  const ctx = cnv.getContext("2d");
+  ctx.fillStyle = "rgba(255,255,255,0.12)";
+  const cx=64, cy=60;
+  // Head
+  ctx.beginPath(); ctx.ellipse(cx,cy,28,34,0,0,Math.PI*2); ctx.fill();
+  // Hair
+  if(who==="jade"){
+    ctx.beginPath(); ctx.ellipse(cx,cy-10,32,26,0,Math.PI,0); ctx.fill();
+    ctx.fillRect(cx-32,cy-10,12,45);
+    ctx.fillRect(cx+20,cy-10,12,45);
+  } else {
+    ctx.beginPath(); ctx.ellipse(cx,cy-14,30,20,0,Math.PI,0); ctx.fill();
+  }
+  // Body
+  ctx.beginPath();
+  ctx.moveTo(cx-30,192); ctx.quadraticCurveTo(cx-30,cy+38,cx-8,cy+38);
+  ctx.lineTo(cx+8,cy+38);
+  ctx.quadraticCurveTo(cx+30,cy+38,cx+30,192);
+  ctx.closePath(); ctx.fill();
+  const tex = new THREE.CanvasTexture(cnv);
+  const mat = new THREE.SpriteMaterial({map:tex, transparent:true});
+  const spr = new THREE.Sprite(mat);
+  spr.scale.set(12, 18, 1);
+  return spr;
+}
+
 /* Difficulty configs */
 const DIFF = {
-  easy:   {speed:0.6, maxSpeed:55, spawnRate:0.015, fuelDrain:0.008, lives:4, lanes:3},
-  medium: {speed:0.8, maxSpeed:75, spawnRate:0.025, fuelDrain:0.012, lives:3, lanes:4},
-  hard:   {speed:1.0, maxSpeed:100, spawnRate:0.04, fuelDrain:0.018, lives:3, lanes:5}
+  easy:   {speed:0.6, maxSpeed:55, spawnRate:0.015, fuelDrain:0.008, lives:4, lanes:3, goalDist:1500},
+  medium: {speed:0.8, maxSpeed:75, spawnRate:0.025, fuelDrain:0.012, lives:3, lanes:4, goalDist:2500},
+  hard:   {speed:1.0, maxSpeed:100, spawnRate:0.04, fuelDrain:0.018, lives:3, lanes:5, goalDist:4000}
 };
-
 /* ================== MAIN GAME CLASS ================== */
 export class EstrellaGame {
   constructor(canvas){
@@ -413,37 +507,36 @@ export class EstrellaGame {
     this._resize();
     window.addEventListener("resize", ()=>this._resize());
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0a0e2a);
-    this.scene.fog = new THREE.FogExp2(0x0a0e2a, 0.006);
-    // Camera
+    this.scene.background = new THREE.Color(0x87CEEB);
+    this.scene.fog = new THREE.FogExp2(0x87CEEB, 0.004);
     this.camera = new THREE.PerspectiveCamera(65, canvas.width/canvas.height, 0.1, 500);
     this.camera.position.set(0, 6, 12);
     this.camera.lookAt(0, 1, -20);
-    // Lights
-    const amb = new THREE.AmbientLight(0x404060, 0.6);
-    this.scene.add(amb);
-    const dir = new THREE.DirectionalLight(0xffeedd, 1.2);
-    dir.position.set(10, 30, 20);
-    dir.castShadow = true;
-    dir.shadow.mapSize.set(1024, 1024);
-    dir.shadow.camera.near = 1; dir.shadow.camera.far = 100;
-    dir.shadow.camera.left = -20; dir.shadow.camera.right = 20;
-    dir.shadow.camera.top = 20; dir.shadow.camera.bottom = -20;
-    this.scene.add(dir);
-    this.dirLight = dir;
-    // Stars in sky
+    // Lights - daylight start
+    this.ambLight = new THREE.AmbientLight(0x8899aa, 0.8);
+    this.scene.add(this.ambLight);
+    this.dirLight = new THREE.DirectionalLight(0xffeedd, 1.4);
+    this.dirLight.position.set(10, 30, 20);
+    this.dirLight.castShadow = true;
+    this.dirLight.shadow.mapSize.set(1024, 1024);
+    this.dirLight.shadow.camera.near = 1; this.dirLight.shadow.camera.far = 100;
+    this.dirLight.shadow.camera.left = -20; this.dirLight.shadow.camera.right = 20;
+    this.dirLight.shadow.camera.top = 20; this.dirLight.shadow.camera.bottom = -20;
+    this.scene.add(this.dirLight);
+    // Hemisphere light for sky color
+    this.hemiLight = new THREE.HemisphereLight(0x87CEEB, 0x1a3a1a, 0.5);
+    this.scene.add(this.hemiLight);
+    // Stars in sky (hidden at day)
     const starGeo = new THREE.BufferGeometry();
     const starVerts = [];
-    for(let i=0;i<500;i++){
-      starVerts.push((Math.random()-.5)*400, Math.random()*100+20, -200-Math.random()*200);
-    }
+    for(let i=0;i<500;i++) starVerts.push((Math.random()-.5)*400, Math.random()*100+20, -200-Math.random()*200);
     starGeo.setAttribute("position",new THREE.Float32BufferAttribute(starVerts,3));
-    const starMat = new THREE.PointsMaterial({color:0xffffff,size:.5});
-    this.stars = new THREE.Points(starGeo, starMat);
+    this.starMat = new THREE.PointsMaterial({color:0xffffff,size:.5,transparent:true,opacity:0});
+    this.stars = new THREE.Points(starGeo, this.starMat);
     this.scene.add(this.stars);
-    // Ground plane
+    // Ground
     const groundGeo = new THREE.PlaneGeometry(200, ROAD_LEN);
-    const groundMat = new THREE.MeshPhongMaterial({color:0x1a3a1a});
+    const groundMat = new THREE.MeshPhongMaterial({color:0x2d5a27});
     this.ground = new THREE.Mesh(groundGeo, groundMat);
     this.ground.rotation.x = -Math.PI/2;
     this.ground.position.set(0, -0.01, -ROAD_LEN/2);
@@ -467,7 +560,7 @@ export class EstrellaGame {
     this.driver = "axel";
     this.playerCar = null;
     this.obstacles = [];
-    this.ramps = [];
+    this.pickups = [];
     this.locoObjs = [];
     this.tiltSide = 0;
     this.tiltFwd = 0;
@@ -477,16 +570,24 @@ export class EstrellaGame {
     this.maxLives = 3;
     this.speed = 0;
     this.dist = 0;
-    this.goalDist = 2000;
+    this.goalDist = 2500;
     this.invincible = 0;
     this.spawnCooldown = 0;
     this.damage = 0;
     this.paused = false;
     this.introPhase = 0;
     this.introTimer = 0;
-    // Intro elements
     this._introCars = [];
     this._introLabels = [];
+    this.silhouette = null;
+    // Jump state
+    this.airborne = false;
+    this.jumpVelocity = 0;
+    this.jumpY = 0;
+    // Day/night colors
+    this._dayBg = new THREE.Color(0x87CEEB);
+    this._sunsetBg = new THREE.Color(0xff7043);
+    this._nightBg = new THREE.Color(0x0a0e2a);
   }
 
   _resize(){
@@ -499,36 +600,71 @@ export class EstrellaGame {
     const cfg=DIFF[this.diff];
     return (lane - (cfg.lanes-1)/2) * LANE_W;
   }
-  /* ── Intro animation ── */
+
+  /* Day -> sunset -> night transition */
+  _updateLighting(progress){
+    const p = Math.min(1, progress);
+    let bgColor, ambInt, dirInt, fogColor, starOp;
+    if(p < 0.4){
+      // Day
+      const t = p / 0.4;
+      bgColor = this._dayBg.clone().lerp(this._sunsetBg, t*0.3);
+      ambInt = 0.8 - t*0.15;
+      dirInt = 1.4 - t*0.3;
+      fogColor = bgColor.clone();
+      starOp = 0;
+    } else if(p < 0.7){
+      // Sunset
+      const t = (p-0.4)/0.3;
+      bgColor = this._sunsetBg.clone().lerp(this._nightBg, t);
+      ambInt = 0.65 - t*0.35;
+      dirInt = 1.1 - t*0.7;
+      fogColor = bgColor.clone();
+      starOp = t*0.5;
+    } else {
+      // Night
+      const t = (p-0.7)/0.3;
+      bgColor = this._nightBg.clone();
+      ambInt = 0.3;
+      dirInt = 0.4;
+      fogColor = this._nightBg.clone();
+      starOp = 0.5 + t*0.5;
+    }
+    this.scene.background.copy(bgColor);
+    this.scene.fog.color.copy(fogColor);
+    this.ambLight.intensity = ambInt;
+    this.dirLight.intensity = dirInt;
+    this.hemiLight.color.copy(bgColor);
+    this.starMat.opacity = starOp;
+  }
+  /* Intro animation */
   startIntro(){
     this.state = "intro";
-    this.introPhase = 0;
     this.introTimer = 0;
-    // Clear any previous intro elements
     this._introCars.forEach(c=>this.scene.remove(c));
     this._introLabels.forEach(c=>this.scene.remove(c));
     this._introCars = [];
     this._introLabels = [];
-    // Position camera for cinematic view
+    // Reset to day
+    this.scene.background.copy(this._dayBg);
+    this.scene.fog.color.copy(this._dayBg);
+    this.ambLight.intensity = 0.8;
+    this.dirLight.intensity = 1.4;
+    this.starMat.opacity = 0;
     this.camera.position.set(0, 15, 25);
     this.camera.lookAt(0, 10, -100);
-    // Set skyline buildings below ground initially
     this.skyline.buildings.forEach(b=>{
       b.userData.targetY = b.position.y;
       b.position.y = -50;
     });
     this.skyline.willis.userData.targetY = 0;
     this.skyline.willis.position.y = -80;
-    // Build intro cars that will pull up
     const carA = buildCar(0xcc0000, true);
     carA.position.set(-8, 0, -30);
-    this.scene.add(carA);
-    this._introCars.push(carA);
+    this.scene.add(carA); this._introCars.push(carA);
     const carJ = buildCar(0x6a1b9a, true);
     carJ.position.set(8, 0, -30);
-    this.scene.add(carJ);
-    this._introCars.push(carJ);
-    // Name labels as sprites
+    this.scene.add(carJ); this._introCars.push(carJ);
     ["AXEL","JADE"].forEach((name,i)=>{
       const cnv=document.createElement("canvas");
       cnv.width=256;cnv.height=64;
@@ -542,27 +678,23 @@ export class EstrellaGame {
       const spr=new THREE.Sprite(mat);
       spr.scale.set(4,1,1);
       spr.position.set(i===0?-8:8, 4, -30);
-      this.scene.add(spr);
-      this._introLabels.push(spr);
+      this.scene.add(spr); this._introLabels.push(spr);
     });
   }
 
   _updateIntro(dt){
     this.introTimer += dt;
     const t = this.introTimer;
-    // Phase 0: Buildings rise (0-2s)
     if(t < 3){
-      const progress = Math.min(t/2.5, 1);
-      const ease = 1 - Math.pow(1-progress, 3);
       this.skyline.buildings.forEach((b,i)=>{
         const delay = i * 0.08;
         const p = Math.max(0, Math.min((t-delay)/2, 1));
         const e = 1 - Math.pow(1-p, 3);
         b.position.y = -50 + (b.userData.targetY+50) * e;
       });
+      const ease = 1 - Math.pow(1-Math.min(t/2.5,1), 3);
       this.skyline.willis.position.y = -80 + 80 * ease;
     }
-    // Phase 1: Cars pull up (2-4s)
     if(t > 1.5 && t < 4){
       const cp = Math.min((t-1.5)/2, 1);
       const ce = 1 - Math.pow(1-cp, 2);
@@ -570,25 +702,21 @@ export class EstrellaGame {
       if(this._introCars[1]) this._introCars[1].position.z = -30 + 25*ce;
       if(this._introLabels[0]) this._introLabels[0].position.z = -30 + 25*ce;
       if(this._introLabels[1]) this._introLabels[1].position.z = -30 + 25*ce;
-      // Bounce labels
       const bounce = Math.sin(t*6)*0.3;
       if(this._introLabels[0]) this._introLabels[0].position.y = 4 + bounce;
       if(this._introLabels[1]) this._introLabels[1].position.y = 4 + bounce;
     }
-    // Camera slowly orbits
     const angle = t * 0.15;
     this.camera.position.x = Math.sin(angle) * 18;
     this.camera.position.z = 20 + Math.cos(angle) * 10;
     this.camera.position.y = 12 + Math.sin(t*0.5)*2;
     this.camera.lookAt(0, 8, -100);
-    // Blink Willis lights
     this.skyline.willis.traverse(c=>{
       if(c.name==="blink") c.material.emissiveIntensity = .5+.5*Math.sin(t*4);
     });
     this.renderer.render(this.scene, this.camera);
   }
 
-  /* Start a game */
   startGame(mode, diff, driver){
     this.mode = mode;
     this.diff = diff;
@@ -599,44 +727,45 @@ export class EstrellaGame {
     this.fuel = 100;
     this.score = 0;
     this.dist = 0;
+    this.goalDist = cfg.goalDist;
     this.speed = 30 * cfg.speed;
     this.damage = 0;
     this.invincible = 0;
     this.spawnCooldown = 0;
     this.paused = false;
+    this.airborne = false;
+    this.jumpVelocity = 0;
+    this.jumpY = 0;
     this.state = "playing";
-    // Clear intro elements
+    // Reset lighting to day
+    this._updateLighting(0);
+    // Clear intro
     this._introCars.forEach(c=>this.scene.remove(c));
     this._introLabels.forEach(c=>this.scene.remove(c));
-    this._introCars = [];
-    this._introLabels = [];
-    // Restore skyline positions
+    this._introCars = []; this._introLabels = [];
     this.skyline.buildings.forEach(b=>{
       if(b.userData.targetY!==undefined) b.position.y = b.userData.targetY;
     });
     this.skyline.willis.position.y = 0;
-    // Clear obstacles
-    this.obstacles.forEach(o=>this.scene.remove(o));
-    this.obstacles = [];
-    this.ramps.forEach(r=>this.scene.remove(r));
-    this.ramps = [];
-    this.locoObjs.forEach(o=>this.scene.remove(o));
-    this.locoObjs = [];
+    // Clear objects
+    this.obstacles.forEach(o=>this.scene.remove(o)); this.obstacles = [];
+    this.pickups.forEach(r=>this.scene.remove(r)); this.pickups = [];
+    this.locoObjs.forEach(o=>this.scene.remove(o)); this.locoObjs = [];
+    // Silhouette
+    if(this.silhouette) this.scene.remove(this.silhouette);
+    this.silhouette = buildSilhouetteSprite(driver);
+    this.silhouette.position.set(15, 45, -200);
+    this.scene.add(this.silhouette);
     // Player car
     if(this.playerCar) this.scene.remove(this.playerCar);
     const pColor = driver==="axel" ? 0xcc0000 : 0x6a1b9a;
     this.playerCar = buildCar(pColor, true);
     this.playerCar.position.set(0, 0, 0);
     this.scene.add(this.playerCar);
-    // Camera for gameplay
     this.camera.position.set(0, 6, 12);
     this.camera.lookAt(0, 1, -20);
-    // Start music + engine
-    sfx.init();
-    sfx.music();
-    sfx.engine(this.speed);
+    sfx.init(); sfx.music(); sfx.engine(this.speed);
   }
-  /* Update loop */
   update(dt){
     if(this.state==="intro"){this._updateIntro(dt);return;}
     if(this.state!=="playing"||this.paused) return;
@@ -649,87 +778,115 @@ export class EstrellaGame {
     if(this.speed < cfg.maxSpeed) this.speed += dt * 2 * cfg.speed;
     const px = this.playerCar.position.x;
     const halfRoad = (cfg.lanes * LANE_W) / 2;
-    this.playerCar.position.x = Math.max(-halfRoad, Math.min(halfRoad, px + this.tiltSide * dt * 15));
+    if(!this.airborne){
+      this.playerCar.position.x = Math.max(-halfRoad, Math.min(halfRoad, px + this.tiltSide * dt * 15));
+    }
     const speedMod = 1 + this.tiltFwd * 0.3;
     const effectiveSpeed = this.speed * Math.max(0.3, speedMod);
     this.dist += effectiveSpeed * dt;
     this.fuel -= cfg.fuelDrain * dt * effectiveSpeed;
     if(this.fuel <= 0){ this.fuel=0; this._endGame(false,"Out of fuel!"); return; }
     this.roadTex.offset.y -= effectiveSpeed * dt * 0.08;
+    // Day/night transition
+    this._updateLighting(this.dist / this.goalDist);
+    // Jump physics
+    if(this.airborne){
+      this.jumpVelocity -= 25 * dt;
+      this.jumpY += this.jumpVelocity * dt;
+      if(this.jumpY <= 0){
+        this.jumpY = 0; this.airborne = false;
+        this.playerCar.position.y = 0;
+        this.playerCar.rotation.x = 0;
+        sfx.thud();
+      } else {
+        this.playerCar.position.y = this.jumpY;
+        this.playerCar.rotation.x = -this.jumpVelocity * 0.01;
+      }
+    }
+    // Spawn cooldown
     if(this.spawnCooldown > 0) this.spawnCooldown -= dt;
+    // Spawn enemies
     if(this.spawnCooldown <= 0 && Math.random() < cfg.spawnRate){
       const lane = Math.floor(Math.random() * cfg.lanes);
       const enemy = buildEnemyCar();
       enemy.position.set(this._laneX(lane), 0, -ROAD_LEN/2 + Math.random()*50);
       enemy.userData.speed = effectiveSpeed * (0.5 + Math.random()*0.3);
-      this.scene.add(enemy);
-      this.obstacles.push(enemy);
+      this.scene.add(enemy); this.obstacles.push(enemy);
     }
+    // Spawn ramps
     if(Math.random() < 0.003){
       const ramp = buildRamp();
       const lane = Math.floor(Math.random() * cfg.lanes);
       ramp.position.set(this._laneX(lane), 0, -ROAD_LEN/2);
-      this.scene.add(ramp);
-      this.ramps.push(ramp);
+      this.scene.add(ramp); this.pickups.push(ramp);
     }
-    if(Math.random() < 0.005){
-      const fuelGeo = new THREE.SphereGeometry(0.4, 8, 8);
-      const fuelMat = new THREE.MeshPhongMaterial({color:0x00e676, emissive:0x00c853, emissiveIntensity:0.5});
-      const fuelOrb = new THREE.Mesh(fuelGeo, fuelMat);
+    // Spawn fuel cans
+    if(Math.random() < 0.004){
+      const fuel = buildGasCan();
       const lane = Math.floor(Math.random() * cfg.lanes);
-      fuelOrb.position.set(this._laneX(lane), 1, -ROAD_LEN/2);
-      fuelOrb.userData.type = "fuel";
-      this.scene.add(fuelOrb);
-      this.ramps.push(fuelOrb);
+      fuel.position.set(this._laneX(lane), 0, -ROAD_LEN/2);
+      this.scene.add(fuel); this.pickups.push(fuel);
     }
-    if(Math.random() < 0.008){
-      const starGeo = new THREE.OctahedronGeometry(0.4, 0);
-      const starMat = new THREE.MeshPhongMaterial({color:0xffd600, emissive:0xffab00, emissiveIntensity:0.6});
-      const star = new THREE.Mesh(starGeo, starMat);
+    // Spawn stars
+    if(Math.random() < 0.006){
+      const star = buildStarPickup();
       const lane = Math.floor(Math.random() * cfg.lanes);
-      star.position.set(this._laneX(lane), 1.2, -ROAD_LEN/2);
-      star.userData.type = "star";
-      this.scene.add(star);
-      this.ramps.push(star);
+      star.position.set(this._laneX(lane), 0, -ROAD_LEN/2);
+      this.scene.add(star); this.pickups.push(star);
     }
+    // Update enemies
     for(let i=this.obstacles.length-1;i>=0;i--){
       const o=this.obstacles[i];
       o.position.z += (effectiveSpeed - (o.userData.speed||0)) * dt;
       if(o.position.z > 20){this.scene.remove(o);this.obstacles.splice(i,1);continue;}
-      if(this.invincible<=0){
+      if(this.invincible<=0 && !this.airborne){
         const dx=Math.abs(o.position.x-this.playerCar.position.x);
         const dz=Math.abs(o.position.z-this.playerCar.position.z);
         if(dx<1.8 && dz<CAR_LEN){this._crash();break;}
       }
     }
-    for(let i=this.ramps.length-1;i>=0;i--){
-      const r=this.ramps[i];
+    // Update pickups
+    for(let i=this.pickups.length-1;i>=0;i--){
+      const r=this.pickups[i];
       r.position.z += effectiveSpeed * dt;
       if(r.userData.type==="star") r.rotation.y += dt*3;
-      if(r.userData.type==="fuel") r.rotation.y += dt*2;
-      if(r.position.z > 15){this.scene.remove(r);this.ramps.splice(i,1);continue;}
+      if(r.userData.type==="fuel") r.rotation.y += dt*1.5;
+      if(r.position.z > 15){this.scene.remove(r);this.pickups.splice(i,1);continue;}
       const dx=Math.abs(r.position.x-this.playerCar.position.x);
       const dz=Math.abs(r.position.z-this.playerCar.position.z);
-      if(dx<1.5 && dz<2){
-        if(r.userData.type==="fuel"){ this.fuel=Math.min(100,this.fuel+25); sfx.boost(); }
-        else if(r.userData.type==="star"){ this.score+=100; sfx.boost(); }
-        else { this.speed+=15; sfx.boost(); setTimeout(()=>{ if(this.state==="playing") this.speed=Math.max(30,this.speed-15); },2000); }
-        this.scene.remove(r);this.ramps.splice(i,1);
+      if(dx<1.8 && dz<2.5){
+        const type = r.userData.type;
+        if(type==="fuel"){ this.fuel=Math.min(100,this.fuel+25); sfx.boost(); }
+        else if(type==="star"){ this.score+=150; sfx.boost(); }
+        else if(type==="ramp" && !this.airborne){
+          this.airborne = true;
+          this.jumpVelocity = 12;
+          this.jumpY = 0.1;
+          sfx.jump();
+          this.speed += 10;
+        }
+        if(type!=="ramp"){ this.scene.remove(r); this.pickups.splice(i,1); }
       }
     }
+    // Invincibility
     if(this.invincible > 0){
       this.invincible -= dt;
       if(this.playerCar) this.playerCar.visible = Math.sin(Date.now()*0.02) > 0;
     } else if(this.playerCar) this.playerCar.visible = true;
     this.score += effectiveSpeed * dt * 0.5;
     sfx.engine(effectiveSpeed);
+    // Camera follow
     this.camera.position.x += (this.playerCar.position.x*0.3 - this.camera.position.x)*0.05;
+    this.camera.position.y = 6 + this.jumpY * 0.4;
+    // Silhouette float
+    if(this.silhouette){
+      this.silhouette.position.y = 45 + Math.sin(Date.now()*0.001)*3;
+    }
     if(this.dist >= this.goalDist){this._endGame(true,"Race Complete!");}
     const now = Date.now();
     this.skyline.willis.traverse(c=>{if(c.name==="blink") c.material.emissiveIntensity=.5+.5*Math.sin(now*.003);});
     this.renderer.render(this.scene, this.camera);
   }
-
   _updateLoco(dt){
     const cfg = DIFF[this.diff];
     this.speed = 40 * cfg.speed;
@@ -740,13 +897,13 @@ export class EstrellaGame {
     this.roadTex.offset.y -= effectiveSpeed * dt * 0.08;
     this.dist += effectiveSpeed * dt;
     this.score += effectiveSpeed * dt * 0.3;
+    this._updateLighting(this.dist / 5000);
     if(this.spawnCooldown > 0) this.spawnCooldown -= dt;
     if(this.spawnCooldown <= 0 && Math.random() < cfg.spawnRate * 0.6){
       const builders = [buildTree, buildHydrant, buildTrashcan, buildCone, buildBarrel, buildChicken];
       const obj = builders[Math.floor(Math.random()*builders.length)]();
       obj.position.set((Math.random()-.5)*ROAD_W, 0, -ROAD_LEN/2+Math.random()*30);
-      this.scene.add(obj);
-      this.locoObjs.push(obj);
+      this.scene.add(obj); this.locoObjs.push(obj);
     }
     for(let i=this.locoObjs.length-1;i>=0;i--){
       const o=this.locoObjs[i];
@@ -775,40 +932,36 @@ export class EstrellaGame {
     } else if(this.playerCar) this.playerCar.visible=true;
     sfx.engine(effectiveSpeed);
     this.camera.position.x += (this.playerCar.position.x*0.3 - this.camera.position.x)*0.05;
+    if(this.silhouette) this.silhouette.position.y = 45 + Math.sin(Date.now()*0.001)*3;
     this.skyline.willis.traverse(c=>{if(c.name==="blink") c.material.emissiveIntensity=.5+.5*Math.sin(Date.now()*.003);});
     this.renderer.render(this.scene, this.camera);
   }
-  /* Crash handler */
+
   _crash(){
     sfx.crash();
     this.lives--;
     if(this.lives <= 0){ this._endGame(false,"No lives left!"); return; }
     this.invincible = 3;
     this.spawnCooldown = 3;
-    // Clear obstacles ahead (300 units)
     for(let i=this.obstacles.length-1;i>=0;i--){
       const o=this.obstacles[i];
       if(o.position.z < this.playerCar.position.z + 5){
-        this.scene.remove(o);
-        this.obstacles.splice(i,1);
+        this.scene.remove(o); this.obstacles.splice(i,1);
       }
     }
-    // Flash HUD
     if(this.onCrash) this.onCrash(this.lives);
   }
 
-  /* Remove car part for Loco damage */
   _removePart(){
     if(!this.playerCar) return;
     const removable = [];
     this.playerCar.traverse(c=>{
-      if(c.name==="spoiler"||c.name==="headlight"||c.name==="cabin"||c.name==="wheel"||c.name==="hubcap"){
+      if(c.name==="spoiler"||c.name==="headlight"||c.name==="cabin"||c.name==="wheel"||c.name==="taillight"){
         if(c.visible) removable.push(c);
       }
     });
     if(removable.length > 0){
       const part = removable[Math.floor(Math.random()*removable.length)];
-      // Animate part flying off
       const flyPart = part.clone();
       flyPart.position.copy(this.playerCar.position);
       flyPart.position.y += 1;
@@ -828,16 +981,20 @@ export class EstrellaGame {
     }
   }
 
-  /* End game */
   _endGame(win, msg){
     this.state = "ended";
-    sfx.stopEngine();
-    sfx.stopMusic();
+    sfx.stopEngine(); sfx.stopMusic();
+    if(this.silhouette){ this.scene.remove(this.silhouette); this.silhouette = null; }
     if(this.onEnd) this.onEnd(win, msg, Math.floor(this.score));
   }
 
-  /* Idle render for menus */
   renderIdle(){
+    // Gentle day scene for menu
+    this.scene.background.copy(this._dayBg);
+    this.scene.fog.color.copy(this._dayBg);
+    this.ambLight.intensity = 0.8;
+    this.dirLight.intensity = 1.4;
+    this.starMat.opacity = 0;
     this.camera.position.set(0, 15, 25);
     this.camera.lookAt(0, 10, -100);
     const t = Date.now() * 0.001;

@@ -1,0 +1,107 @@
+export const STORAGE_LANGUAGE_KEY = "estrella-racer-language";
+
+const STRINGS = {
+  en: {
+    title: "Estrella Racer ✨",
+    subtitle: "{primary} & {secondary} neon rush",
+    missionHint: "Collect stars, dodge traffic, and unleash chaos in Loco Mode.",
+    raceMission: "Mission: lane streaks + star chains.",
+    locoMission: "Mission: crash props and stack combos.",
+    startRace: "⭐ Start Race Mode",
+    startLoco: "💥 Start Loco Mode",
+    openGarage: "🚗 Garage",
+    closeGarage: "Close Garage",
+    garageTitle: "Garage + Avatar Studio",
+    garageHint: "Pick a car and tune names for every license plate.",
+    photoHintMissing: "Drop Axel-Jade.heic, side-by-side.jpg, or photo.jpg in assets/reference/axel-jade/.",
+    photoHintLoaded: "Photo loaded from assets/reference/axel-jade/.",
+    primaryName: "Primary name",
+    secondaryName: "Secondary name",
+    saveNames: "Save Names",
+    namesSaved: "Names saved!",
+    languageButtonEn: "EN",
+    languageButtonEs: "ES",
+    audioOn: "🔊 Audio On",
+    audioOff: "🔇 Audio Off",
+    modeRace: "Mode: Race",
+    modeLoco: "Mode: Loco",
+    stars: "Stars",
+    score: "Score",
+    combo: "Combo",
+    plate: "Plate",
+    pause: "Pause",
+    resume: "Resume",
+    exit: "Exit",
+    restart: "Restart",
+    backMenu: "Back to Menu",
+    resultCrashTitle: "Spin Out!",
+    resultCrashMessage: "Tap restart and chase another star streak.",
+    controlLeft: "◀ Left",
+    controlUp: "▲ Up",
+    controlDown: "▼ Down",
+    controlRight: "Right ▶",
+    starBoost: "Star Boost",
+    carRed: "Red Comet",
+    carBlue: "Blue Pulse",
+    carGreen: "Volt Verde",
+    carPurple: "Nova Drift",
+    carGold: "Turbo Sol"
+  },
+  es: {
+    title: "Estrella Racer ✨",
+    subtitle: "Aventura neon de {primary} y {secondary}",
+    missionHint: "Colecciona estrellas, evita trafico, y activa Loco Mode.",
+    raceMission: "Mision: rachas de carril y cadenas de estrellas.",
+    locoMission: "Mision: choca props y sube combos.",
+    startRace: "⭐ Iniciar Modo Carrera",
+    startLoco: "💥 Iniciar Modo Loco",
+    openGarage: "🚗 Garaje",
+    closeGarage: "Cerrar Garaje",
+    garageTitle: "Garaje + Estudio de Avatar",
+    garageHint: "Elige auto y ajusta nombres para cada placa.",
+    photoHintMissing: "Pon Axel-Jade.heic, side-by-side.jpg, o photo.jpg en assets/reference/axel-jade/.",
+    photoHintLoaded: "Foto cargada desde assets/reference/axel-jade/.",
+    primaryName: "Nombre principal",
+    secondaryName: "Nombre secundario",
+    saveNames: "Guardar Nombres",
+    namesSaved: "Nombres guardados!",
+    languageButtonEn: "EN",
+    languageButtonEs: "ES",
+    audioOn: "🔊 Audio Activo",
+    audioOff: "🔇 Audio Silencio",
+    modeRace: "Modo: Carrera",
+    modeLoco: "Modo: Loco",
+    stars: "Estrellas",
+    score: "Puntos",
+    combo: "Combo",
+    plate: "Placa",
+    pause: "Pausa",
+    resume: "Continuar",
+    exit: "Salir",
+    restart: "Reiniciar",
+    backMenu: "Volver al Menu",
+    resultCrashTitle: "Derrape!",
+    resultCrashMessage: "Toca reiniciar para otra racha de estrellas.",
+    controlLeft: "◀ Izq",
+    controlUp: "▲ Arriba",
+    controlDown: "▼ Abajo",
+    controlRight: "Der ▶",
+    starBoost: "Impulso Estrella",
+    carRed: "Cometa Roja",
+    carBlue: "Pulso Azul",
+    carGreen: "Volt Verde",
+    carPurple: "Deriva Nova",
+    carGold: "Turbo Sol"
+  }
+};
+
+export function t(language, key, vars = {}) {
+  const table = STRINGS[language] || STRINGS.en;
+  const fallback = STRINGS.en[key];
+  const raw = table[key] || fallback || key;
+  return raw.replace(/\{(\w+)\}/g, (_, varName) => String(vars[varName] ?? ""));
+}
+
+export function getLanguageButtonText(language) {
+  return language === "en" ? t(language, "languageButtonEs") : t(language, "languageButtonEn");
+}

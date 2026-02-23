@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0e1026">
+<title>Estrella Racer</title>
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<div id="app">
+  <canvas id="gameCanvas" aria-label="Estrella Racer game"></canvas>
+
+  <div id="overlay">
+    <header id="topBar" class="glass">
+      <button id="languageBtn" class="chip"></button>
+      <button id="audioBtn" class="chip"></button>
+      <button id="garageBtn" class="chip"></button>
+    </header>
+
+    <section id="menuPanel" class="panel glass">
+      <h1 id="gameTitle"></h1>
+      <p id="gameSubtitle"></p>
+      <p id="missionHint" class="hint"></p>
+      <div class="stack">
+        <button id="startRaceBtn" class="action"></button>
+        <button id="startLocoBtn" class="action"></button>
+      </div>
+    </section>
+
+    <section id="carPanel" class="panel glass hidden">
+      <h2 id="carPanelTitle"></h2>
+      <p id="carPanelHint" class="hint"></p>
+
+      <div id="avatarFrame" class="glass">
+        <img id="avatarPreview" alt="Avatar inspiration" class="hidden">
+        <p id="avatarHint"></p>
+      </div>
+
+      <div class="nameRow">
+        <label>
+          <span id="primaryNameLabel"></span>
+          <input id="primaryNameInput" maxlength="16" autocomplete="off">
+        </label>
+        <label>
+          <span id="secondaryNameLabel"></span>
+          <input id="secondaryNameInput" maxlength="16" autocomplete="off">
+        </label>
+      </div>
+      <button id="saveNamesBtn" class="chip"></button>
+
+      <div id="carGrid"></div>
+
+      <div class="stack">
+        <button id="closeGarageBtn" class="chip"></button>
+      </div>
+    </section>
+
+    <section id="resultPanel" class="panel glass hidden">
+      <h2 id="resultTitle"></h2>
+      <p id="resultMessage"></p>
+      <div class="stack">
+        <button id="restartBtn" class="action"></button>
+        <button id="backMenuBtn" class="chip"></button>
+      </div>
+    </section>
+
+    <section id="hud" class="glass hidden">
+      <span id="hudMode"></span>
+      <span id="hudStars"></span>
+      <span id="hudScore"></span>
+      <span id="hudCombo"></span>
+      <span id="hudPlates"></span>
+      <button id="pauseBtn" class="chip"></button>
+      <button id="exitBtn" class="chip"></button>
+    </section>
+
+    <section id="controls" class="glass hidden">
+      <button class="controlBtn" data-control="left" id="controlLeft"></button>
+      <button class="controlBtn" data-control="up" id="controlUp"></button>
+      <button class="controlBtn" data-control="down" id="controlDown"></button>
+      <button class="controlBtn" data-control="right" id="controlRight"></button>
+    </section>
+  </div>
+</div>
+
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

@@ -7,6 +7,10 @@ const STORAGE_DRIVER_KEY = "estrella-racer-driver";
 const STORAGE_MUTE_KEY = "estrella-racer-muted";
 const STORAGE_TILT_KEY = "estrella-racer-tilt";
 const AVATAR_CANDIDATES = [
+  "assets/reference/axel-jade/IMG_6923.heic",
+  "assets/reference/axel-jade/IMG_6923.jpg",
+  "assets/reference/axel-jade/IMG_6923.jpeg",
+  "assets/reference/axel-jade/IMG_6923.png",
   "assets/reference/axel-jade/Axel-Jade.heic",
   "assets/reference/axel-jade/axel-jade.heic",
   "assets/reference/axel-jade/side-by-side.jpg",

@@ -11,100 +11,74 @@
 </head>
 <body>
 <div id="app">
-  <canvas id="gameCanvas" aria-label="Estrella Racer game"></canvas>
-
+  <canvas id="gameCanvas"></canvas>
   <div id="overlay">
     <header id="topBar">
-      <button id="languageBtn" class="iconBtn"></button>
-      <button id="tiltBtn" class="iconBtn"></button>
-      <button id="audioBtn" class="iconBtn"></button>
+      <button id="muteBtn" class="iconBtn">🔊</button>
     </header>
 
     <section id="menuPanel" class="panel">
       <div class="logoWrap">
         <span class="logoStar">⭐</span>
-        <h1 id="gameTitle"></h1>
+        <h1 id="gameTitle">ESTRELLA RACER</h1>
         <span class="logoStar">⭐</span>
       </div>
-      <button id="playBtn" class="bigPlay"></button>
+      <button id="playBtn" class="bigPlay">▶  PLAY</button>
     </section>
 
-    <section id="driverPanel" class="panel hidden">
-      <h2 id="driverTitle"></h2>
-      <div class="driverGrid">
-        <button id="driverAxelBtn" class="driverCard active">
-          <canvas id="avatarAxel" class="avatarCanvas" width="140" height="140"></canvas>
-          <span class="driverLabel" id="labelAxel"></span>
+    <section id="selectPanel" class="panel hidden">
+      <h2 class="secTitle">Choose Your Racer</h2>
+      <div class="driverRow">
+        <button id="pickAxel" class="driverCard active">
+          <canvas id="avatarAxel" class="avatarCanvas" width="160" height="200"></canvas>
+          <span class="driverLabel" id="labelAxel">Axel</span>
         </button>
-        <button id="driverJadeBtn" class="driverCard">
-          <canvas id="avatarJade" class="avatarCanvas" width="140" height="140"></canvas>
-          <span class="driverLabel" id="labelJade"></span>
-        </button>
-      </div>
-      <button id="nextDiffBtn" class="actionBtn"></button>
-      <button id="backMenuBtn2" class="backBtn"></button>
-    </section>
-
-    <section id="diffPanel" class="panel hidden">
-      <h2 id="diffTitle"></h2>
-      <div class="diffGrid">
-        <button id="diffEasyBtn" class="diffCard active" data-diff="easy">
-          <span class="diffIcon">🟢</span><span id="diffEasyLabel"></span>
-        </button>
-        <button id="diffMedBtn" class="diffCard" data-diff="medium">
-          <span class="diffIcon">🟡</span><span id="diffMedLabel"></span>
-        </button>
-        <button id="diffHardBtn" class="diffCard" data-diff="hard">
-          <span class="diffIcon">🔴</span><span id="diffHardLabel"></span>
+        <button id="pickJade" class="driverCard">
+          <canvas id="avatarJade" class="avatarCanvas" width="160" height="200"></canvas>
+          <span class="driverLabel" id="labelJade">Jade</span>
         </button>
       </div>
-      <button id="nextModeBtn" class="actionBtn"></button>
-      <button id="backDriverBtn" class="backBtn"></button>
-    </section>
-
-    <section id="modePanel" class="panel hidden">
-      <h2 id="modeSelectTitle"></h2>
-      <div class="modeGrid">
-        <button id="modeRaceBtn" class="modeCard">
-          <span class="modeIcon">🏁</span><span id="modeRaceLabel"></span>
-        </button>
-        <button id="modeLocoBtn" class="modeCard">
-          <span class="modeIcon">💥</span><span id="modeLocoLabel"></span>
-        </button>
+      <div class="diffRow">
+        <button id="diffEasy" class="diffPill" data-d="easy">🟢 Easy</button>
+        <button id="diffMed" class="diffPill active" data-d="medium">🟡 Medium</button>
+        <button id="diffHard" class="diffPill" data-d="hard">🔴 Hard</button>
       </div>
-      <button id="backDiffBtn" class="backBtn"></button>
+      <div class="modeRow">
+        <button id="goRace" class="modeBtn race">🏁 RACE</button>
+        <button id="goLoco" class="modeBtn loco">💥 LOCO</button>
+      </div>
+      <button id="backMenu" class="backBtn">← Back</button>
     </section>
 
     <section id="hud" class="hidden">
       <div id="hudRow">
         <span id="hudLives"></span>
-        <span id="hudScore"></span>
-        <span id="hudFuel"></span>
+        <span id="hudScore">⭐ 0</span>
+        <span id="hudFuel">⛽ 100%</span>
       </div>
-      <div id="progressWrap">
-        <div id="progressBar"></div>
-        <span id="progressLabel"></span>
-      </div>
+      <div id="progressWrap"><div id="progressBar"></div></div>
       <div id="hudFlash" class="hidden"></div>
       <div id="hudBtns">
-        <button id="pauseBtn" class="iconBtn"></button>
+        <button id="pauseBtn" class="iconBtn">⏸</button>
         <button id="exitBtn" class="iconBtn">🏠</button>
       </div>
     </section>
 
     <section id="controls" class="hidden">
-      <button class="ctrlBtn" id="ctrlLeft">◀</button>
-      <button class="ctrlBtn" id="ctrlUp">▲</button>
-      <button class="ctrlBtn" id="ctrlDown">▼</button>
-      <button class="ctrlBtn" id="ctrlRight">▶</button>
+      <div class="ctrlSide ctrlL"><button class="ctrlBtn" id="ctrlLeft">◀</button></div>
+      <div class="ctrlCenter">
+        <button class="ctrlBtn sm" id="ctrlUp">▲</button>
+        <button class="ctrlBtn sm" id="ctrlDown">▼</button>
+      </div>
+      <div class="ctrlSide ctrlR"><button class="ctrlBtn" id="ctrlRight">▶</button></div>
     </section>
 
     <section id="resultPanel" class="panel hidden">
       <h2 id="resultTitle"></h2>
       <p id="resultMsg"></p>
       <p id="resultScore"></p>
-      <button id="retryBtn" class="actionBtn"></button>
-      <button id="backMenuBtn" class="backBtn"></button>
+      <button id="retryBtn" class="actionBtn">🔄 RETRY</button>
+      <button id="backMenuBtn" class="backBtn">🏠 Menu</button>
     </section>
   </div>
 </div>

@@ -18,24 +18,24 @@
       <button id="muteBtn" class="iconBtn">🔊</button>
     </header>
 
-    <section id="menuPanel" class="panel">
+    <section id="menuPanel" class="panel menuStyle">
       <div class="logoWrap">
         <span class="logoStar">⭐</span>
-        <h1>ESTRELLA RACER</h1>
+        <h1 class="gameTitle">ESTRELLA RACER</h1>
         <span class="logoStar">⭐</span>
       </div>
-      <button id="playBtn" class="bigPlay">▶  PLAY</button>
+      <button id="playBtn" class="bigPlay">🏁 RACE START</button>
     </section>
 
     <section id="selectPanel" class="panel hidden">
       <h2 class="secTitle">Choose Your Racer</h2>
       <div class="driverRow">
         <button id="pickAxel" class="driverCard active">
-          <div class="avatarWrap"><img id="avatarAxelImg" class="avatarImg hidden" alt="Axel"><canvas id="avatarAxel" class="avatarCanvas" width="160" height="200"></canvas></div>
+          <div class="avatarWrap"><canvas id="avatarAxel" class="avatarCanvas" width="160" height="200"></canvas></div>
           <span class="driverLabel" id="labelAxel">Axel</span>
         </button>
         <button id="pickJade" class="driverCard">
-          <div class="avatarWrap"><img id="avatarJadeImg" class="avatarImg hidden" alt="Jade"><canvas id="avatarJade" class="avatarCanvas" width="160" height="200"></canvas></div>
+          <div class="avatarWrap"><canvas id="avatarJade" class="avatarCanvas" width="160" height="200"></canvas></div>
           <span class="driverLabel" id="labelJade">Jade</span>
         </button>
       </div>
@@ -63,15 +63,6 @@
         <button id="pauseBtn" class="iconBtn">⏸</button>
         <button id="exitBtn" class="iconBtn">🏠</button>
       </div>
-    </section>
-
-    <section id="controls" class="hidden">
-      <div class="ctrlSide ctrlL"><button class="ctrlBtn" id="ctrlLeft">◀</button></div>
-      <div class="ctrlCenter">
-        <button class="ctrlBtn sm" id="ctrlUp">▲</button>
-        <button class="ctrlBtn sm" id="ctrlDown">▼</button>
-      </div>
-      <div class="ctrlSide ctrlR"><button class="ctrlBtn" id="ctrlRight">▶</button></div>
     </section>
 
     <section id="resultPanel" class="panel hidden">

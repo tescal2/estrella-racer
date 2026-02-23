@@ -215,15 +215,15 @@ export function drawAvatar(canvas, who){
     // Voluminous hair with body
     ctx.beginPath();ctx.ellipse(cx,cy-14,38,32,0,Math.PI,0);ctx.fill();
     // Side volume - thick flowing hair down past shoulders
-    ctx.beginPath();ctx.ellipse(cx-32,cy+10,16,45,0.1,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.ellipse(cx+32,cy+10,16,45,-0.1,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(cx-32,cy+10,16,55,0.1,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(cx+32,cy+10,16,55,-0.1,0,Math.PI*2);ctx.fill();
     // Hair draping over shoulders
-    ctx.fillRect(cx-38,cy-14,14,70);
-    ctx.fillRect(cx+24,cy-14,14,70);
+    ctx.fillRect(cx-38,cy-14,14,80);
+    ctx.fillRect(cx+24,cy-14,14,80);
     // Inner wave texture
     ctx.fillStyle=hairHi;
-    ctx.beginPath();ctx.ellipse(cx-30,cy+25,8,20,0.15,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.ellipse(cx+30,cy+25,8,20,-0.15,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(cx-30,cy+30,8,25,0.15,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(cx+30,cy+30,8,25,-0.15,0,Math.PI*2);ctx.fill();
     // Hair shine
     ctx.fillStyle="rgba(255,255,255,0.08)";
     ctx.fillRect(cx-10,cy-38,8,20);
@@ -274,12 +274,29 @@ export function drawAvatar(canvas, who){
   ctx.fillStyle=skinShadow;
   ctx.beginPath();ctx.ellipse(cx-3,cy+16,2,1.5,0,0,Math.PI*2);ctx.fill();
   ctx.beginPath();ctx.ellipse(cx+3,cy+16,2,1.5,0,0,Math.PI*2);ctx.fill();
-  // Mouth/smile - big happy smile
+  // Mouth/smile - big happy grin
   ctx.fillStyle="#c0604a";
-  ctx.beginPath();ctx.ellipse(cx,cy+24,12,6,0,0,Math.PI);ctx.fill();
-  // Teeth showing in smile
-  ctx.fillStyle="rgba(255,255,255,0.8)";
-  ctx.fillRect(cx-7,cy+24,14,3);
+  ctx.beginPath();ctx.ellipse(cx,cy+23,14,9,0,0,Math.PI);ctx.fill();
+  // Upper lip line
+  ctx.strokeStyle="#a04030";ctx.lineWidth=1.2;
+  ctx.beginPath();ctx.ellipse(cx,cy+23,14,2,0,Math.PI,0);ctx.stroke();
+  // Teeth showing in wide smile
+  ctx.fillStyle="#fff";
+  ctx.fillRect(cx-9,cy+23,18,5);
+  // Tooth lines
+  ctx.strokeStyle="rgba(200,200,200,0.4)";ctx.lineWidth=0.5;
+  for(let tx=-6;tx<=6;tx+=3){ctx.beginPath();ctx.moveTo(cx+tx,cy+23);ctx.lineTo(cx+tx,cy+28);ctx.stroke();}
+  // Tongue hint
+  ctx.fillStyle="#e57373";
+  ctx.beginPath();ctx.ellipse(cx,cy+30,5,3,0,0,Math.PI);ctx.fill();
+  // Cheek blush for happy look
+  ctx.fillStyle="rgba(255,120,100,0.2)";
+  ctx.beginPath();ctx.ellipse(cx-18,cy+18,7,4,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(cx+18,cy+18,7,4,0,0,Math.PI*2);ctx.fill();
+  // Smile creases
+  ctx.strokeStyle="rgba(0,0,0,0.08)";ctx.lineWidth=1;
+  ctx.beginPath();ctx.arc(cx-14,cy+20,6,0.3,1.2);ctx.stroke();
+  ctx.beginPath();ctx.arc(cx+14,cy+20,6,Math.PI-1.2,Math.PI-0.3);ctx.stroke();
   // Neck
   ctx.fillStyle=skin;ctx.fillRect(cx-9,cy+35,18,16);
   ctx.fillStyle=skinShadow;ctx.fillRect(cx-9,cy+35,18,3);
@@ -303,7 +320,7 @@ export function drawAvatar(canvas, who){
 function buildCar(color, isPlayer, driverName){
   const g = new THREE.Group();
   const col = new THREE.Color(color);
-  const mat = new THREE.MeshPhongMaterial({color:col, shininess:80});
+  const mat = new THREE.MeshPhongMaterial({color:col, shininess:120, specular:0x444444});
   const chassis = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.25, CAR_LEN), new THREE.MeshPhongMaterial({color:0x111111}));
   chassis.position.y = 0.25; g.add(chassis);
   const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.55, CAR_LEN*0.9), mat);
@@ -313,7 +330,7 @@ function buildCar(color, isPlayer, driverName){
   const trunk = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.15, 0.9), mat);
   trunk.position.set(0, 0.92, -1.3); g.add(trunk);
   const cabGeo = new THREE.BoxGeometry(1.8, 0.65, 1.6);
-  const cabMat = new THREE.MeshPhongMaterial({color:0x88ccff, transparent:true, opacity:0.5, shininess:100});
+  const cabMat = new THREE.MeshPhongMaterial({color:0x88ccff, transparent:true, opacity:0.4, shininess:150, specular:0x88aaff, reflectivity:0.8});
   const cab = new THREE.Mesh(cabGeo, cabMat);
   cab.position.set(0, 1.25, -0.1); cab.name="cabin"; g.add(cab);
   const ws = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 0.7),
@@ -420,14 +437,14 @@ function buildCar(color, isPlayer, driverName){
         // Voluminous long hair
         const dHairTop = new THREE.Mesh(new THREE.SphereGeometry(0.28,8,8), dHairMat);
         dHairTop.position.set(0, 1.72, -0.18); g.add(dHairTop);
-        // Side volume - hair flowing down past shoulders
+        // Side volume - hair flowing down well past shoulders
         [-0.22, 0.22].forEach(x=>{
-          const side = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.08,0.6,6), dHairMat);
-          side.position.set(x, 1.35, -0.2); g.add(side);
+          const side = new THREE.Mesh(new THREE.CylinderGeometry(0.1,0.06,0.9,6), dHairMat);
+          side.position.set(x, 1.2, -0.2); g.add(side);
         });
-        // Hair draping behind
-        const dHairBack = new THREE.Mesh(new THREE.BoxGeometry(0.45,0.5,0.14), dHairMat);
-        dHairBack.position.set(0, 1.4, -0.28); g.add(dHairBack);
+        // Hair draping behind - longer
+        const dHairBack = new THREE.Mesh(new THREE.BoxGeometry(0.45,0.7,0.14), dHairMat);
+        dHairBack.position.set(0, 1.3, -0.28); g.add(dHairBack);
       } else {
         // Poofy full hair on top
         const dHairBase = new THREE.Mesh(new THREE.SphereGeometry(0.26,8,8), dHairMat);
@@ -449,7 +466,7 @@ function buildCar(color, isPlayer, driverName){
       const shirtCol = isJade ? 0xe91e63 : 0x1565c0;
       const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.18,0.22,0.35,6),
         new THREE.MeshPhongMaterial({color:shirtCol}));
-      torso.position.set(0, 1.25, -0.1); g.add(torso);
+      torso.position.set(0, 1.25, -0.1); torso.name="driverTorso"; g.add(torso);
     }
   }
   return g;
@@ -1184,7 +1201,7 @@ function buildSkyMessage(who){
   ctx.fillStyle=gloss;
   ctx.fillText("Go "+name+" Go!",512,128);
   const tex=new THREE.CanvasTexture(cnv);
-  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,opacity:0.85});
+  const mat=new THREE.SpriteMaterial({map:tex,transparent:true,opacity:1.0});
   const spr=new THREE.Sprite(mat);
   spr.scale.set(40,10,1);
   return spr;
@@ -1219,11 +1236,13 @@ const DIFF = {
 export class EstrellaGame {
   constructor(canvas){
     this.canvas = canvas;
-    this.renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:false});
+    this.renderer = new THREE.WebGLRenderer({canvas, antialias:true, alpha:false, powerPreference:"high-performance"});
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
+    this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    this.renderer.toneMappingExposure = 1.1;
     this._resize();
     window.addEventListener("resize", ()=>this._resize());
     this.scene = new THREE.Scene();
@@ -1238,13 +1257,18 @@ export class EstrellaGame {
     this.dirLight = new THREE.DirectionalLight(0xffeedd, 1.4);
     this.dirLight.position.set(10, 30, 20);
     this.dirLight.castShadow = true;
-    this.dirLight.shadow.mapSize.set(1024, 1024);
+    this.dirLight.shadow.mapSize.set(2048, 2048);
     this.dirLight.shadow.camera.near=1;this.dirLight.shadow.camera.far=100;
     this.dirLight.shadow.camera.left=-20;this.dirLight.shadow.camera.right=20;
     this.dirLight.shadow.camera.top=20;this.dirLight.shadow.camera.bottom=-20;
+    this.dirLight.shadow.bias=-0.001;
     this.scene.add(this.dirLight);
     this.hemiLight = new THREE.HemisphereLight(0x87CEEB, 0x1a3a1a, 0.5);
     this.scene.add(this.hemiLight);
+    // Fill light for softer shadows
+    const fillLight = new THREE.DirectionalLight(0x8899bb, 0.4);
+    fillLight.position.set(-8, 15, -10);
+    this.scene.add(fillLight);
     // Stars
     const starGeo = new THREE.BufferGeometry();
     const sv = [];
@@ -1255,7 +1279,7 @@ export class EstrellaGame {
     this.scene.add(this.stars);
     // Ground
     const gndGeo = new THREE.PlaneGeometry(200, ROAD_LEN+ROAD_BEHIND);
-    const gndMat = new THREE.MeshPhongMaterial({color:0x3a3a3a});
+    const gndMat = new THREE.MeshPhongMaterial({color:0x3a3a3a, shininess:5, specular:0x111111});
     this.ground = new THREE.Mesh(gndGeo, gndMat);
     this.ground.rotation.x=-Math.PI/2;
     this.ground.position.set(0,-0.01, -(ROAD_LEN-ROAD_BEHIND)/2);
@@ -1564,8 +1588,14 @@ export class EstrellaGame {
           this._starGlow=3; // car glow timer
         }
         else if(type==="mushroom"){
-          sfx.mushroomSound();this._bigMode=5; // 5 seconds of big car
-          this.playerCar.scale.set(1.5,1.5,1.5);
+          sfx.mushroomSound();this._bigMode=5;
+          // Scale only the driver character, not the car
+          if(this.playerCar){
+            this.playerCar.traverse(c=>{
+              if(c.name==="driverHead")c.scale.set(2.2,2.2,2.2);
+              if(c.name==="driverTorso"){c.scale.set(2,2.5,2);c.position.y+=0.4;}
+            });
+          }
         }
         else if(type==="ramp"&&!this.airborne){this.airborne=true;this.jumpVelocity=12;this.jumpY=0.1;sfx.jump();this.speed+=10;}
         if(type!=="ramp"){this.scene.remove(r);this.pickups.splice(i,1);}
@@ -1586,7 +1616,12 @@ export class EstrellaGame {
     // Mushroom big mode countdown
     if(this._bigMode>0){
       this._bigMode-=dt;
-      if(this._bigMode<=0&&this.playerCar) this.playerCar.scale.set(1,1,1);
+      if(this._bigMode<=0&&this.playerCar){
+        this.playerCar.traverse(c=>{
+          if(c.name==="driverHead")c.scale.set(1,1,1);
+          if(c.name==="driverTorso"){c.scale.set(1,1,1);c.position.y=1.25;}
+        });
+      }
     }
     if(this.invincible>0){this.invincible-=dt;if(this.playerCar&&!this._starGlow)this.playerCar.visible=Math.sin(Date.now()*0.02)>0;}
     else if(this.playerCar)this.playerCar.visible=true;
@@ -1679,18 +1714,27 @@ export class EstrellaGame {
       this.finishFlag.position.set(0,0,-15);
       this.scene.add(this.finishFlag);
     }
-    // Spawn confetti
+    // Spawn taco rain 🌮
     this._confetti=[];
-    const confettiColors=[0xff0000,0xffeb3b,0x4caf50,0x2196f3,0xff9800,0xe91e63,0x9c27b0];
     for(let i=0;i<80;i++){
-      const cm=new THREE.Mesh(new THREE.PlaneGeometry(0.3,0.15),
-        new THREE.MeshPhongMaterial({color:confettiColors[i%confettiColors.length],side:THREE.DoubleSide}));
-      cm.position.set((Math.random()-0.5)*20, 15+Math.random()*10, (Math.random()-0.5)*15);
-      cm.userData.vx=(Math.random()-0.5)*2;
-      cm.userData.vy=-(1+Math.random()*2);
-      cm.userData.vr=Math.random()*5;
-      this.scene.add(cm);
-      this._confetti.push(cm);
+      // Taco shape: half-circle shell + filling
+      const tg=new THREE.Group();
+      const shell=new THREE.Mesh(new THREE.SphereGeometry(0.25,8,8,0,Math.PI),
+        new THREE.MeshPhongMaterial({color:0xdaa520,side:THREE.DoubleSide}));
+      shell.rotation.x=-Math.PI/2; tg.add(shell);
+      // Filling
+      const fill=new THREE.Mesh(new THREE.BoxGeometry(0.3,0.08,0.2),
+        new THREE.MeshPhongMaterial({color:0x8bc34a}));
+      fill.position.y=0.02; tg.add(fill);
+      const meat=new THREE.Mesh(new THREE.BoxGeometry(0.25,0.06,0.15),
+        new THREE.MeshPhongMaterial({color:0x8d6e63}));
+      meat.position.y=0.06; tg.add(meat);
+      tg.position.set((Math.random()-0.5)*20, 15+Math.random()*10, (Math.random()-0.5)*15);
+      tg.userData.vx=(Math.random()-0.5)*2;
+      tg.userData.vy=-(1+Math.random()*2);
+      tg.userData.vr=Math.random()*5;
+      this.scene.add(tg);
+      this._confetti.push(tg);
     }
     this.obstacles.forEach(o=>this.scene.remove(o));this.obstacles=[];
     this.pickups.forEach(r=>this.scene.remove(r));this.pickups=[];

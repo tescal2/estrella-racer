@@ -34,6 +34,15 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0a0e2a;font-family:
 .modeBtn.race{background:linear-gradient(135deg,#2196f3,#00bcd4);color:#fff}
 .modeBtn.loco{background:linear-gradient(135deg,#ff5722,#ff9800);color:#fff}
 .backBtn{padding:8px 20px;border:1px solid rgba(255,255,255,.2);border-radius:10px;background:rgba(0,0,0,.3);color:#aaa;font-size:14px;cursor:pointer}
+.coinBadge{font-size:18px;font-weight:700;color:#ffd700;text-shadow:0 0 8px rgba(255,215,0,.5)}
+.goldenRow{display:flex;gap:10px;justify-content:center}
+.goldenBtn{padding:8px 16px;border:2px solid #ffd700;border-radius:12px;background:rgba(255,215,0,.1);color:#ffd700;font-size:13px;font-weight:700;cursor:pointer;min-width:90px}
+.goldenBtn.unlocked{background:linear-gradient(135deg,#ffd700,#ffab00);color:#333;border-color:#ffab00}
+.goldenBtn:disabled{opacity:.4;cursor:not-allowed}
+.levelRow{display:flex;gap:8px;justify-content:center}
+.levelPill{padding:8px 14px;border:2px solid rgba(255,255,255,.2);border-radius:16px;background:rgba(0,0,0,.3);color:#fff;font-size:13px;font-weight:600;cursor:pointer}
+.levelPill.active{border-color:#ffe14d;background:rgba(255,225,77,.15)}
+.levelPill:disabled{opacity:.35;cursor:not-allowed}
 
 /* HUD */
 #hud{position:absolute;top:calc(env(safe-area-inset-top,4px) + 44px);left:8px;right:8px;display:flex;flex-direction:column;gap:4px;pointer-events:none}

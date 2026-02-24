@@ -1,10 +1,35 @@
-/* Estrella Racer - Three.js 3D engine v7 */
+/* Estrella Racer - Three.js 3D engine v8 */
 
 const LANE_W = 3.2;
 const CAR_LEN = 3.8;
 const ROAD_W = 22;
 const ROAD_LEN = 700;
 const ROAD_BEHIND = 120;
+
+/* Persistent currency via localStorage */
+const SAVE_KEY = "estrellaRacerSave";
+function loadSave(){
+  try{ return JSON.parse(localStorage.getItem(SAVE_KEY))||{coins:0,golden:{axel:false,jade:false},levelsUnlocked:1}; }
+  catch(e){ return {coins:0,golden:{axel:false,jade:false},levelsUnlocked:1}; }
+}
+function saveSave(d){ try{ localStorage.setItem(SAVE_KEY,JSON.stringify(d)); }catch(e){} }
+export function getSave(){ return loadSave(); }
+export function buyCar(who){
+  const s=loadSave();
+  if(s.coins>=500){s.coins-=500;s.golden[who]=true;saveSave(s);return true;}
+  return false;
+}
+
+const GOLDEN_PRICE = 500; // ~5 runs to earn
+export { GOLDEN_PRICE };
+
+/* Level definitions */
+const LEVELS = [
+  {id:1, name:"Chicago Skyline", skyColor:0x87CEEB, fogColor:0x87CEEB, groundColor:0x3a3a3a, roadColor:null, neon:false},
+  {id:2, name:"Cosmic Neon", skyColor:0x0a0020, fogColor:0x0a0020, groundColor:0x0a0a1a, roadColor:0x1a1a3a, neon:true},
+  {id:3, name:"Desert Sunset", skyColor:0xff7043, fogColor:0xff7043, groundColor:0xd2b48c, roadColor:null, neon:false}
+];
+export { LEVELS };
 
 /* Sound FX */
 class SoundFX {
@@ -174,6 +199,35 @@ class SoundFX {
       o.frequency.exponentialRampToValueAtTime(800,t+.3);
       g.gain.setValueAtTime(.15,t);g.gain.exponentialRampToValueAtTime(.01,t+.35);
       o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.4);
+    });
+  }
+  squish(){
+    this._play(c=>{
+      const t=c.currentTime;
+      const o=c.createOscillator(),g=c.createGain();
+      o.type="sawtooth";o.frequency.setValueAtTime(300,t);
+      o.frequency.exponentialRampToValueAtTime(60,t+.15);
+      g.gain.setValueAtTime(.25,t);g.gain.exponentialRampToValueAtTime(.01,t+.2);
+      o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.25);
+      // Wet splat noise
+      const buf=c.createBuffer(1,c.sampleRate*.1,c.sampleRate);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*.3*Math.exp(-i/(c.sampleRate*.03));
+      const n=c.createBufferSource(),ng=c.createGain();
+      n.buffer=buf;ng.gain.setValueAtTime(.2,t);
+      ng.gain.exponentialRampToValueAtTime(.01,t+.1);
+      n.connect(ng);ng.connect(c.destination);n.start(t+.05);
+    });
+  }
+  boing(){
+    this._play(c=>{
+      const t=c.currentTime;
+      const o=c.createOscillator(),g=c.createGain();
+      o.type="sine";o.frequency.setValueAtTime(150,t);
+      o.frequency.exponentialRampToValueAtTime(600,t+.1);
+      o.frequency.exponentialRampToValueAtTime(200,t+.25);
+      g.gain.setValueAtTime(.2,t);g.gain.exponentialRampToValueAtTime(.01,t+.3);
+      o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.35);
     });
   }
 }
@@ -682,10 +736,24 @@ function buildChicken(){const g=new THREE.Group();const b=new THREE.Mesh(new THR
 
 function buildRamp(){
   const g = new THREE.Group();
-  const m=new THREE.Mesh(new THREE.BoxGeometry(3,.5,2.5),new THREE.MeshPhongMaterial({color:0xffd600,emissive:0xffa000,emissiveIntensity:.3}));
-  m.rotation.x=.2;m.position.y=.3;g.add(m);
-  const ar=new THREE.Mesh(new THREE.ConeGeometry(0.3,0.5,3),new THREE.MeshPhongMaterial({color:0xff6f00,emissive:0xff6f00,emissiveIntensity:.5}));
-  ar.position.set(0,0.7,0);ar.rotation.x=-Math.PI/2;g.add(ar);
+  // Orange construction ramp with stripes
+  const rampMat=new THREE.MeshPhongMaterial({color:0xff6d00,shininess:60});
+  const base=new THREE.Mesh(new THREE.BoxGeometry(3.2,0.3,3),rampMat);
+  base.position.y=0.15; g.add(base);
+  const slope=new THREE.Mesh(new THREE.BoxGeometry(3,0.5,2.5),rampMat);
+  slope.rotation.x=0.25;slope.position.set(0,0.5,0); g.add(slope);
+  // Black warning stripes
+  const stripeMat=new THREE.MeshPhongMaterial({color:0x212121});
+  for(let i=-1;i<=1;i++){
+    const stripe=new THREE.Mesh(new THREE.BoxGeometry(0.2,0.52,2.5),stripeMat);
+    stripe.rotation.x=0.25;stripe.position.set(i*0.8,0.52,0); g.add(stripe);
+  }
+  // Traffic cones on sides
+  const coneMat=new THREE.MeshPhongMaterial({color:0xff6d00,emissive:0xff6d00,emissiveIntensity:0.2});
+  [-1.8,1.8].forEach(x=>{
+    const cone=new THREE.Mesh(new THREE.ConeGeometry(0.15,0.5,6),coneMat);
+    cone.position.set(x,0.35,0); g.add(cone);
+  });
   g.userData.type="ramp"; return g;
 }
 
@@ -820,12 +888,12 @@ function buildRestaurant(){
   const aw = new THREE.Mesh(new THREE.BoxGeometry(6.5,0.15,1.5),
     new THREE.MeshPhongMaterial({color:0xd32f2f}));
   aw.position.set(0,3.2,2.5); aw.rotation.x=0.15; g.add(aw);
-  // Sign "ZACATACOS"
-  const sc=document.createElement("canvas");sc.width=256;sc.height=48;
+  // Sign "TACOS"
+  const sc=document.createElement("canvas");sc.width=256;sc.height=64;
   const sx=sc.getContext("2d");
-  sx.fillStyle="#ffeb3b";sx.fillRect(0,0,256,48);
-  sx.fillStyle="#d32f2f";sx.font="bold 32px sans-serif";sx.textAlign="center";
-  sx.fillText("ZACATACOS",128,36);
+  sx.fillStyle="#ffeb3b";sx.fillRect(0,0,256,64);
+  sx.fillStyle="#d32f2f";sx.font="bold 48px sans-serif";sx.textAlign="center";
+  sx.fillText("TACOS",128,48);
   const signTex=new THREE.CanvasTexture(sc);
   const sign=new THREE.Mesh(new THREE.PlaneGeometry(4,0.9),new THREE.MeshBasicMaterial({map:signTex}));
   sign.position.set(0,4.3,2.01); g.add(sign);
@@ -912,11 +980,11 @@ function buildBirrieria(){
     new THREE.MeshPhongMaterial({color:0x2e7d32}));
   aw.position.set(0,3.2,2.5); aw.rotation.x=0.15; g.add(aw);
   // Sign
-  const sc=document.createElement("canvas");sc.width=320;sc.height=48;
+  const sc=document.createElement("canvas");sc.width=256;sc.height=64;
   const sx=sc.getContext("2d");
-  sx.fillStyle="#fff3e0";sx.fillRect(0,0,320,48);
-  sx.fillStyle="#1b5e20";sx.font="bold 24px sans-serif";sx.textAlign="center";
-  sx.fillText("Birrieria Zaragoza",160,34);
+  sx.fillStyle="#fff3e0";sx.fillRect(0,0,256,64);
+  sx.fillStyle="#1b5e20";sx.font="bold 48px sans-serif";sx.textAlign="center";
+  sx.fillText("BIRRIA",128,48);
   const signTex=new THREE.CanvasTexture(sc);
   const sign=new THREE.Mesh(new THREE.PlaneGeometry(4.5,0.9),new THREE.MeshBasicMaterial({map:signTex}));
   sign.position.set(0,4.3,2.01); g.add(sign);
@@ -934,6 +1002,81 @@ function buildBirrieria(){
     new THREE.MeshPhongMaterial({color:0xffffff,transparent:true,opacity:0.4}));
   steam.position.set(1,4.6,0); g.add(steam);
   g.userData.type="birrieria"; return g;
+}
+
+function buildPanaderia(){
+  const g = new THREE.Group();
+  const bm = new THREE.MeshPhongMaterial({color:0xfff8e1});
+  const bldg = new THREE.Mesh(new THREE.BoxGeometry(6,4,4),bm);
+  bldg.position.y=2; g.add(bldg);
+  const aw = new THREE.Mesh(new THREE.BoxGeometry(6.5,0.15,1.5),
+    new THREE.MeshPhongMaterial({color:0xf57f17}));
+  aw.position.set(0,3.2,2.5); aw.rotation.x=0.15; g.add(aw);
+  const sc=document.createElement("canvas");sc.width=256;sc.height=64;
+  const sx=sc.getContext("2d");
+  sx.fillStyle="#f57f17";sx.fillRect(0,0,256,64);
+  sx.fillStyle="#fff";sx.font="bold 40px sans-serif";sx.textAlign="center";
+  sx.fillText("PANADERIA",128,48);
+  const sign=new THREE.Mesh(new THREE.PlaneGeometry(4,0.9),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(sc)}));
+  sign.position.set(0,4.3,2.01); g.add(sign);
+  const door = new THREE.Mesh(new THREE.PlaneGeometry(1,2),new THREE.MeshPhongMaterial({color:0x5d4037}));
+  door.position.set(0,1,2.01); g.add(door);
+  const wm = new THREE.MeshPhongMaterial({color:0xbbdefb,emissive:0x90caf9,emissiveIntensity:0.3});
+  [-1.8,1.8].forEach(x=>{
+    const win=new THREE.Mesh(new THREE.PlaneGeometry(0.8,0.8),wm);
+    win.position.set(x,2.5,2.01); g.add(win);
+  });
+  g.userData.type="panaderia"; return g;
+}
+
+function buildSupermercado(){
+  const g = new THREE.Group();
+  const bm = new THREE.MeshPhongMaterial({color:0xe8f5e9});
+  const bldg = new THREE.Mesh(new THREE.BoxGeometry(7,5,5),bm);
+  bldg.position.y=2.5; g.add(bldg);
+  const aw = new THREE.Mesh(new THREE.BoxGeometry(7.5,0.15,1.5),
+    new THREE.MeshPhongMaterial({color:0x2e7d32}));
+  aw.position.set(0,4.2,3); aw.rotation.x=0.15; g.add(aw);
+  const sc=document.createElement("canvas");sc.width=320;sc.height=64;
+  const sx=sc.getContext("2d");
+  sx.fillStyle="#2e7d32";sx.fillRect(0,0,320,64);
+  sx.fillStyle="#fff";sx.font="bold 32px sans-serif";sx.textAlign="center";
+  sx.fillText("SUPERMERCADO",160,46);
+  const sign=new THREE.Mesh(new THREE.PlaneGeometry(5,0.9),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(sc)}));
+  sign.position.set(0,5.3,2.51); g.add(sign);
+  const door = new THREE.Mesh(new THREE.PlaneGeometry(1.5,2.5),new THREE.MeshPhongMaterial({color:0x5d4037}));
+  door.position.set(0,1.25,2.51); g.add(door);
+  const wm = new THREE.MeshPhongMaterial({color:0xbbdefb,emissive:0x90caf9,emissiveIntensity:0.3});
+  [-2.2,2.2].forEach(x=>{
+    const win=new THREE.Mesh(new THREE.PlaneGeometry(1.2,1),wm);
+    win.position.set(x,3,2.51); g.add(win);
+  });
+  g.userData.type="supermercado"; return g;
+}
+
+function buildCarneceria(){
+  const g = new THREE.Group();
+  const bm = new THREE.MeshPhongMaterial({color:0xffebee});
+  const bldg = new THREE.Mesh(new THREE.BoxGeometry(6,4,4),bm);
+  bldg.position.y=2; g.add(bldg);
+  const aw = new THREE.Mesh(new THREE.BoxGeometry(6.5,0.15,1.5),
+    new THREE.MeshPhongMaterial({color:0xc62828}));
+  aw.position.set(0,3.2,2.5); aw.rotation.x=0.15; g.add(aw);
+  const sc=document.createElement("canvas");sc.width=256;sc.height=64;
+  const sx=sc.getContext("2d");
+  sx.fillStyle="#c62828";sx.fillRect(0,0,256,64);
+  sx.fillStyle="#fff";sx.font="bold 36px sans-serif";sx.textAlign="center";
+  sx.fillText("CARNECERIA",128,46);
+  const sign=new THREE.Mesh(new THREE.PlaneGeometry(4,0.9),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(sc)}));
+  sign.position.set(0,4.3,2.01); g.add(sign);
+  const door = new THREE.Mesh(new THREE.PlaneGeometry(1,2),new THREE.MeshPhongMaterial({color:0x3e2723}));
+  door.position.set(0,1,2.01); g.add(door);
+  const wm = new THREE.MeshPhongMaterial({color:0xbbdefb,emissive:0x90caf9,emissiveIntensity:0.3});
+  [-1.8,1.8].forEach(x=>{
+    const win=new THREE.Mesh(new THREE.PlaneGeometry(0.8,0.8),wm);
+    win.position.set(x,2.5,2.01); g.add(win);
+  });
+  g.userData.type="carneceria"; return g;
 }
 
 function buildPaletero(){
@@ -1310,9 +1453,9 @@ function playVictoryMusic(ctx){
 }
 
 const DIFF = {
-  easy:   {speed:0.6, maxSpeed:55, spawnRate:0.015, fuelDrain:0.008, lives:4, lanes:3, goalDist:1500},
-  medium: {speed:0.8, maxSpeed:75, spawnRate:0.025, fuelDrain:0.012, lives:3, lanes:4, goalDist:2500},
-  hard:   {speed:1.0, maxSpeed:100, spawnRate:0.04, fuelDrain:0.018, lives:3, lanes:5, goalDist:4000}
+  easy:   {speed:0.6, maxSpeed:50, spawnRate:0.012, lives:4, lanes:3, goalDist:1500},
+  medium: {speed:0.85, maxSpeed:80, spawnRate:0.03, lives:3, lanes:4, goalDist:3000},
+  hard:   {speed:1.1, maxSpeed:110, spawnRate:0.05, lives:3, lanes:5, goalDist:5000}
 };
 /* ================== MAIN GAME CLASS ================== */
 export class EstrellaGame {
@@ -1400,7 +1543,6 @@ export class EstrellaGame {
     this.tiltSide = 0;
     this.tiltFwd = 0;
     this.score = 0;
-    this.fuel = 100;
     this.lives = 3;
     this.maxLives = 3;
     this.speed = 0;
@@ -1440,16 +1582,22 @@ export class EstrellaGame {
   _updateLighting(progress){
     const p=Math.min(1,progress);
     let bgColor,ambInt,dirInt,starOp;
-    if(p<0.4){const t=p/0.4;bgColor=this._dayBg.clone().lerp(this._sunsetBg,t*0.3);ambInt=0.8-t*0.15;dirInt=1.4-t*0.3;starOp=0;}
-    else if(p<0.7){const t=(p-0.4)/0.3;bgColor=this._sunsetBg.clone().lerp(this._nightBg,t);ambInt=0.65-t*0.35;dirInt=1.1-t*0.7;starOp=t*0.5;}
-    else{bgColor=this._nightBg.clone();ambInt=0.3;dirInt=0.4;starOp=0.5+((p-0.7)/0.3)*0.5;}
+    if(this._neonMode){
+      // Cosmic neon: always dark with neon glow
+      bgColor=new THREE.Color(0x0a0020);ambInt=0.25;dirInt=0.3;starOp=1;
+    } else {
+      if(p<0.4){const t=p/0.4;bgColor=this._dayBg.clone().lerp(this._sunsetBg,t*0.3);ambInt=0.8-t*0.15;dirInt=1.4-t*0.3;starOp=0;}
+      else if(p<0.7){const t=(p-0.4)/0.3;bgColor=this._sunsetBg.clone().lerp(this._nightBg,t);ambInt=0.65-t*0.35;dirInt=1.1-t*0.7;starOp=t*0.5;}
+      else{bgColor=this._nightBg.clone();ambInt=0.3;dirInt=0.4;starOp=0.5+((p-0.7)/0.3)*0.5;}
+    }
     this.scene.background.copy(bgColor);this.scene.fog.color.copy(bgColor);
     this.ambLight.intensity=ambInt;this.dirLight.intensity=dirInt;
     this.hemiLight.color.copy(bgColor);this.starMat.opacity=starOp;
   }
 
   _spawnScenery(z){
-    const builders=[buildRestaurant, buildBirrieria, buildFleaMarket, buildPark,
+    const builders=[buildRestaurant, buildBirrieria, buildPanaderia, buildSupermercado,
+      buildCarneceria, buildFleaMarket, buildPark,
       buildPaletero, buildFishSeller, buildTamaleStand, buildDancers,
       buildConcreteBuilding, buildConcreteBuilding, buildConcreteBuilding];
     this._sceneryCount = (this._sceneryCount||0)+1;
@@ -1457,7 +1605,6 @@ export class EstrellaGame {
       const b=builders[Math.floor(Math.random()*builders.length)]();
       const x=side*(ROAD_W/2+6+Math.random()*3);
       b.position.set(x, 0, z);
-      if(side>0) b.rotation.y=Math.PI;
       this.scene.add(b);
       return b;
     };
@@ -1543,17 +1690,33 @@ export class EstrellaGame {
     this.skyline.willis.traverse(c=>{if(c.name==="blink")c.material.emissiveIntensity=.5+.5*Math.sin(t*4);});
     this.renderer.render(this.scene,this.camera);
   }
-  startGame(mode, diff, driver){
+  startGame(mode, diff, driver, opts={}){
     this.mode=mode;this.diff=diff;this.driver=driver;
+    this.isGolden=opts.golden||false;
+    this.currentLevel=opts.level||1;
+    this._coinsEarned=0;
     const cfg=DIFF[diff];
     this.lives=cfg.lives;this.maxLives=cfg.lives;
-    this.fuel=100;this.score=0;this.dist=0;this.goalDist=cfg.goalDist;
+    this.score=0;this.dist=0;this.goalDist=cfg.goalDist;
     this.speed=30*cfg.speed;this.damage=0;this.invincible=0;this.spawnCooldown=0;
     this._missingWheelSide=0;
     this._starGlow=0;this._bigMode=0;
+    this._powerupBonus=this.isGolden?2:0; // golden car gets +2s on powerups
     if(this._sparks){this.scene.remove(this._sparks);this._sparks=null;}
     this.paused=false;this.airborne=false;this.jumpVelocity=0;this.jumpY=0;
     this.state="playing";this.victoryPhase=0;this.victoryTimer=0;
+    // Apply level theme
+    const lvl=LEVELS[(this.currentLevel-1)%LEVELS.length];
+    this._dayBg=new THREE.Color(lvl.skyColor);
+    this._neonMode=lvl.neon||false;
+    if(lvl.groundColor) this.ground.material.color.setHex(lvl.groundColor);
+    if(lvl.roadColor) this.road.material.color.setHex(lvl.roadColor);
+    else this.road.material.color.setHex(0xffffff);
+    if(this._neonMode){
+      this.scene.fog=new THREE.FogExp2(lvl.fogColor,0.006);
+    } else {
+      this.scene.fog=new THREE.FogExp2(lvl.fogColor,0.004);
+    }
     this._updateLighting(0);
     this._introCars.forEach(c=>this.scene.remove(c));this._introCars=[];
     this._introLabels.forEach(c=>this.scene.remove(c));this._introLabels=[];
@@ -1577,11 +1740,18 @@ export class EstrellaGame {
     this.finishFlag=null;
     // Player car
     if(this.playerCar)this.scene.remove(this.playerCar);
-    const pColor=driver==="axel"?0xcc0000:0x6a1b9a;
+    let pColor=driver==="axel"?0xcc0000:0x6a1b9a;
+    if(this.isGolden) pColor=0xffd700;
     this.playerCar=buildCar(pColor,true,driver);
-    this.playerCar.rotation.y=Math.PI; // face forward (toward -z)
+    this.playerCar.rotation.y=Math.PI;
     this.playerCar.position.set(0,0,0);
     this.scene.add(this.playerCar);
+    // Neon mode: add glow to car in cosmic level
+    if(this._neonMode&&this.playerCar){
+      this.playerCar.traverse(c=>{
+        if(c.material&&c.name==="body") c.material.emissive.setHex(0x330066);
+      });
+    }
     this.camera.position.set(0,6,12);this.camera.lookAt(0,1,-20);
     sfx.init();sfx.music();sfx.engine(this.speed);
   }
@@ -1600,12 +1770,11 @@ export class EstrellaGame {
     if(this.speed<cfg.maxSpeed)this.speed+=dt*2*cfg.speed;
     const px=this.playerCar.position.x;
     const halfRoad=(cfg.lanes*LANE_W)/2;
-    if(!this.airborne) this.playerCar.position.x=Math.max(-halfRoad,Math.min(halfRoad,px+this.tiltSide*dt*15));
+    const steerSpeed=this.isGolden?20:15;
+    if(!this.airborne) this.playerCar.position.x=Math.max(-halfRoad,Math.min(halfRoad,px+this.tiltSide*dt*steerSpeed));
     const speedMod=1+this.tiltFwd*0.3;
     const effectiveSpeed=this.speed*Math.max(0.3,speedMod);
     this.dist+=effectiveSpeed*dt;
-    this.fuel-=cfg.fuelDrain*dt*effectiveSpeed;
-    if(this.fuel<=0){this.fuel=0;this._endGame(false,"Out of fuel!");return;}
     this.roadTex.offset.y-=effectiveSpeed*dt*0.08;
     this._updateLighting(this.dist/this.goalDist);
     this._updateScenery(effectiveSpeed, dt);
@@ -1628,8 +1797,6 @@ export class EstrellaGame {
     }
     // Spawn ramps
     if(Math.random()<0.003){const r=buildRamp();const lane=Math.floor(Math.random()*cfg.lanes);r.position.set(this._laneX(lane),0,-ROAD_LEN/2);this.scene.add(r);this.pickups.push(r);}
-    // Spawn fuel
-    if(Math.random()<0.004){const f=buildGasCan();const lane=Math.floor(Math.random()*cfg.lanes);f.position.set(this._laneX(lane),0,-ROAD_LEN/2);this.scene.add(f);this.pickups.push(f);}
     // Spawn stars
     if(Math.random()<0.006){const s=buildStarPickup();const lane=Math.floor(Math.random()*cfg.lanes);s.position.set(this._laneX(lane),0,-ROAD_LEN/2);this.scene.add(s);this.pickups.push(s);}
     // Spawn mushrooms
@@ -1649,7 +1816,19 @@ export class EstrellaGame {
       if(this.invincible<=0&&!this.airborne){
         const dx=Math.abs(o.position.x-this.playerCar.position.x);
         const dz=Math.abs(o.position.z-this.playerCar.position.z);
-        if(dx<1.8&&dz<CAR_LEN){this._crash();return;}
+        if(dx<1.8&&dz<CAR_LEN){
+          if(this._bigMode>0){
+            // Smash and flatten the car
+            sfx.squish();
+            o.scale.set(1.3,0.15,1.3);
+            o.position.y=0.1;
+            this.score+=100;
+            setTimeout(()=>{this.scene.remove(o);},800);
+            this.obstacles.splice(i,1);
+            continue;
+          }
+          this._crash();return;
+        }
       }
     }
     // Update pickups
@@ -1657,30 +1836,25 @@ export class EstrellaGame {
       const r=this.pickups[i];
       r.position.z+=effectiveSpeed*dt;
       if(r.userData.type==="star")r.rotation.y+=dt*3;
-      if(r.userData.type==="fuel")r.rotation.y+=dt*1.5;
       if(r.userData.type==="mushroom")r.rotation.y+=dt*2;
       if(r.position.z>15){this.scene.remove(r);this.pickups.splice(i,1);continue;}
       const dx=Math.abs(r.position.x-this.playerCar.position.x);
       const dz=Math.abs(r.position.z-this.playerCar.position.z);
       if(dx<1.8&&dz<2.5){
         const type=r.userData.type;
-        if(type==="fuel"){this.fuel=Math.min(100,this.fuel+25);sfx.boost();}
-        else if(type==="star"){
+        if(type==="star"){
           this.score+=150;sfx.starChime();sfx.powerupMusic();
-          this.invincible=Math.max(this.invincible,3);
-          this._starGlow=3; // car glow timer
+          const dur=3+this._powerupBonus;
+          this.invincible=Math.max(this.invincible,dur);
+          this._starGlow=dur;
+          this._coinsEarned+=10;
         }
         else if(type==="mushroom"){
-          sfx.mushroomSound();this._bigMode=5;
-          // Raise driver up out of the car, make torso taller
-          if(this.playerCar){
-            this.playerCar.traverse(c=>{
-              if(c.name==="driverHead"){c.position.y=2.3;c.scale.set(1.3,1.3,1.3);}
-              if(c.name==="driverTorso"){c.position.y=1.7;c.scale.set(1.4,2.0,1.4);}
-            });
-          }
+          sfx.mushroomSound();this._bigMode=3+this._powerupBonus;
+          if(this.playerCar) this.playerCar.scale.set(1.5,1.5,1.5);
+          this._coinsEarned+=5;
         }
-        else if(type==="ramp"&&!this.airborne){this.airborne=true;this.jumpVelocity=12;this.jumpY=0.1;sfx.jump();this.speed+=10;}
+        else if(type==="ramp"&&!this.airborne){this.airborne=true;this.jumpVelocity=18;this.jumpY=0.1;sfx.boing();this.speed+=10;}
         if(type!=="ramp"){this.scene.remove(r);this.pickups.splice(i,1);}
       }
     }
@@ -1700,10 +1874,7 @@ export class EstrellaGame {
     if(this._bigMode>0){
       this._bigMode-=dt;
       if(this._bigMode<=0&&this.playerCar){
-        this.playerCar.traverse(c=>{
-          if(c.name==="driverHead"){c.position.y=1.65;c.scale.set(1,1,1);}
-          if(c.name==="driverTorso"){c.position.y=1.25;c.scale.set(1,1,1);}
-        });
+        this.playerCar.scale.set(1,1,1);
       }
     }
     if(this.invincible>0){this.invincible-=dt;if(this.playerCar&&!this._starGlow)this.playerCar.visible=Math.sin(Date.now()*0.02)>0;}
@@ -2072,13 +2243,22 @@ export class EstrellaGame {
     sfx.stopEngine();sfx.stopMusic();
     if(this.silhouette){this.scene.remove(this.silhouette);this.silhouette=null;}
     if(this.finishFlag){this.scene.remove(this.finishFlag);this.finishFlag=null;}
-    // Clear confetti
     if(this._confetti){this._confetti.forEach(c=>this.scene.remove(c));this._confetti=null;}
     if(this._sparks){this.scene.remove(this._sparks);this._sparks=null;}
-    // Clear scenery
     this.sceneryLeft.forEach(s=>this.scene.remove(s));this.sceneryLeft=[];
     this.sceneryRight.forEach(s=>this.scene.remove(s));this.sceneryRight=[];
-    if(this.onEnd)this.onEnd(win,msg,Math.floor(this.score));
+    // Award coins based on score and completion
+    const baseCoins=Math.floor(this.score*0.1)+(this._coinsEarned||0);
+    const bonus=win?50:0;
+    const totalCoins=baseCoins+bonus;
+    const save=loadSave();
+    save.coins+=totalCoins;
+    // Unlock next level on victory
+    if(win&&this.currentLevel>=save.levelsUnlocked&&save.levelsUnlocked<LEVELS.length){
+      save.levelsUnlocked++;
+    }
+    saveSave(save);
+    if(this.onEnd)this.onEnd(win,msg,Math.floor(this.score),totalCoins,save);
   }
 
   renderIdle(){

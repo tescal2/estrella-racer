@@ -29,6 +29,7 @@
 
     <section id="selectPanel" class="panel hidden">
       <h2 class="secTitle">Choose Your Racer</h2>
+      <div id="coinDisplay" class="coinBadge">🪙 0</div>
       <div class="driverRow">
         <button id="pickAxel" class="driverCard active">
           <div class="avatarWrap"><canvas id="avatarAxel" class="avatarCanvas" width="160" height="200"></canvas></div>
@@ -36,6 +37,15 @@
         <button id="pickJade" class="driverCard">
           <div class="avatarWrap"><canvas id="avatarJade" class="avatarCanvas" width="160" height="200"></canvas></div>
         </button>
+      </div>
+      <div class="goldenRow">
+        <button id="goldenAxel" class="goldenBtn">🔒 500 🪙</button>
+        <button id="goldenJade" class="goldenBtn">🔒 500 🪙</button>
+      </div>
+      <div class="levelRow">
+        <button id="level1" class="levelPill active">1️⃣ Chicago</button>
+        <button id="level2" class="levelPill" disabled>2️⃣ Cosmic</button>
+        <button id="level3" class="levelPill" disabled>3️⃣ Desert</button>
       </div>
       <div class="diffRow">
         <button id="diffEasy" class="diffPill" data-d="easy">🟢 Easy</button>
@@ -53,7 +63,6 @@
       <div id="hudRow">
         <span id="hudLives"></span>
         <span id="hudScore">⭐ 0</span>
-        <span id="hudFuel">⛽ 100%</span>
       </div>
       <div id="progressWrap">
         <svg id="progressSvg" viewBox="0 0 300 30" preserveAspectRatio="none">

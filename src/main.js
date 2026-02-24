@@ -47,7 +47,7 @@ drawAvatar($("avatarJade"), "jade");
 /* Update coin display and level/golden car state */
 function updateShopUI(){
   const save = getSave();
-  $("coinDisplay").textContent = "\uD83E\uDE99 " + save.coins;
+  $("coinDisplay").textContent = "\u2B50 " + save.coins;
   // Golden car buttons
   ["axel","jade"].forEach(who=>{
     const btn=$("golden"+who.charAt(0).toUpperCase()+who.slice(1));
@@ -57,7 +57,7 @@ function updateShopUI(){
       btn.classList.add("unlocked");
       btn.disabled=false;
     } else {
-      btn.textContent="\uD83D\uDD12 "+GOLDEN_PRICE+" \uD83E\uDE99";
+      btn.textContent="\uD83D\uDD12 "+GOLDEN_PRICE+" \u2B50";
       btn.classList.remove("unlocked");
       btn.disabled=save.coins<GOLDEN_PRICE;
     }
@@ -66,11 +66,14 @@ function updateShopUI(){
   for(let i=1;i<=LEVELS.length;i++){
     const btn=$("level"+i);
     if(!btn) continue;
+    const lvlNames=["1️⃣ Chicago","2️⃣ Cosmic","3️⃣ Desert"];
     if(i<=save.levelsUnlocked){
       btn.disabled=false;
+      btn.textContent=lvlNames[i-1];
       btn.classList.toggle("active",i===currentLevel);
     } else {
       btn.disabled=true;
+      btn.textContent="\uD83D\uDD12 "+LEVELS[i-1].name;
       btn.classList.remove("active");
     }
   }
@@ -154,7 +157,7 @@ function updateHUD(){
   const hearts = [];
   for(let i=0;i<game.maxLives;i++) hearts.push(i<game.lives?"\u2764\uFE0F":"\u{1F5A4}");
   $("hudLives").textContent = hearts.join(" ");
-  $("hudScore").textContent = "\u2B50 " + Math.floor(game.score);
+  $("hudScore").textContent = "\u2B50 " + Math.floor(game._coinsEarned||0);
   const pct = Math.min(100, (game.dist / game.goalDist) * 100);
   const path = $("progressPath");
   if(path){
@@ -180,28 +183,44 @@ game.onCrash = (livesLeft) => {
 };
 
 /* End callback */
-game.onEnd = (win, msg, score, coins, save) => {
+game.onEnd = (win, msg, coins, save) => {
   show($("hud"), false);
   show($("resultPanel"), true);
   $("resultTitle").textContent = win ? "\uD83C\uDFC6 Victory!" : "\uD83D\uDCA5 Game Over";
-  let resultMsg = msg;
-  if(coins) resultMsg += "\n\uD83E\uDE99 +" + coins + " coins earned!";
-  if(win && save){
-    const coinsToGold = GOLDEN_PRICE - save.coins;
-    if(coinsToGold>0 && (!save.golden.axel||!save.golden.jade)){
-      resultMsg += "\n\uD83D\uDD12 " + coinsToGold + " more coins for Golden Car!";
+  const resultDiv = $("resultMsg");
+  resultDiv.innerHTML = "";
+  if(win){
+    const lines = [
+      "\u2B50 +" + coins + " stars earned",
+      "\uD83C\uDFE6 Bank: " + (save?save.coins:0) + " stars"
+    ];
+    if(save && (!save.golden.axel||!save.golden.jade)){
+      const need = GOLDEN_PRICE - save.coins;
+      if(need>0) lines.push("\uD83D\uDD12 " + need + " more for Golden Car");
     }
-    if(save.levelsUnlocked>currentLevel){
-      resultMsg += "\n\u2728 Level " + (currentLevel+1) + " Unlocked!";
+    if(save && save.levelsUnlocked>currentLevel){
+      lines.push("\u2728 Level " + (currentLevel+1) + " Unlocked!");
     }
+    lines.forEach(l=>{
+      const p=document.createElement("p");p.textContent=l;p.style.margin="6px 0";resultDiv.appendChild(p);
+    });
+  } else {
+    resultDiv.textContent = msg;
   }
-  $("resultMsg").textContent = resultMsg;
-  $("resultScore").textContent = "\u2B50 Score: " + score + "  \uD83E\uDE99 Bank: " + (save?save.coins:0);
+  $("resultScore").textContent = "";
+  // Update buttons based on win/level
+  const retryBtn = $("retryBtn");
+  const nextLevel = currentLevel + 1;
+  if(win && save && save.levelsUnlocked >= nextLevel && nextLevel <= LEVELS.length){
+    retryBtn.textContent = "\uD83C\uDF1F Level " + nextLevel;
+    retryBtn.onclick = ()=>{ currentLevel=nextLevel; updateShopUI(); launchGame(game.mode); };
+  } else {
+    retryBtn.textContent = "\uD83D\uDD04 Retry";
+    retryBtn.onclick = ()=>launchGame(game.mode);
+  }
 };
 
-$("retryBtn").addEventListener("click", () => launchGame(game.mode));
 $("backMenuBtn").addEventListener("click", () => backToMenu());
-$("backMenu").addEventListener("click", () => backToMenu());
 $("exitBtn").addEventListener("click", () => {
   game.state = "idle";
   sfx.stopEngine();

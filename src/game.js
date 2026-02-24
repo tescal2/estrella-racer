@@ -1,4 +1,4 @@
-/* Estrella Racer - Three.js 3D engine v8 */
+/* Estrella Racer - Three.js 3D engine v8.1 */
 
 const LANE_W = 3.2;
 const CAR_LEN = 3.8;
@@ -228,6 +228,51 @@ class SoundFX {
       o.frequency.exponentialRampToValueAtTime(200,t+.25);
       g.gain.setValueAtTime(.2,t);g.gain.exponentialRampToValueAtTime(.01,t+.3);
       o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.35);
+    });
+  }
+  explosion(){
+    this._play(c=>{
+      const t=c.currentTime;
+      // Deep boom
+      const o=c.createOscillator(),g=c.createGain();
+      o.type="sine";o.frequency.setValueAtTime(60,t);
+      o.frequency.exponentialRampToValueAtTime(20,t+.4);
+      g.gain.setValueAtTime(.4,t);g.gain.exponentialRampToValueAtTime(.01,t+.5);
+      o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+.5);
+      // Crackle
+      const buf=c.createBuffer(1,c.sampleRate*.3,c.sampleRate);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*.5*Math.exp(-i/(c.sampleRate*.08));
+      const n=c.createBufferSource(),ng=c.createGain();
+      n.buffer=buf;ng.gain.setValueAtTime(.35,t);
+      ng.gain.exponentialRampToValueAtTime(.01,t+.3);
+      n.connect(ng);ng.connect(c.destination);n.start(t);
+    });
+  }
+  bullsIntro(){
+    // Sirius / Alan Parsons-inspired epic synth intro
+    this.init();if(this.muted||!this.ctx)return;
+    const c=this.ctx,t=c.currentTime;
+    // Rising synth pads (E-G-B-E pattern, dramatic buildup)
+    const notes=[164.8,196,246.9,329.6,392,493.9,659.3,784];
+    notes.forEach((f,i)=>{
+      const o=c.createOscillator(),g=c.createGain();
+      o.type="sawtooth";o.frequency.value=f;
+      const start=t+i*0.45;
+      g.gain.setValueAtTime(0,start);
+      g.gain.linearRampToValueAtTime(.06,start+.15);
+      g.gain.setValueAtTime(.06,start+.35);
+      g.gain.exponentialRampToValueAtTime(.01,start+.44);
+      o.connect(g);g.connect(c.destination);o.start(start);o.stop(start+.45);
+    });
+    // Dramatic bass drum hits
+    [0,0.9,1.8,2.7].forEach(offset=>{
+      const o=c.createOscillator(),g=c.createGain();
+      o.type="sine";o.frequency.setValueAtTime(80,t+offset);
+      o.frequency.exponentialRampToValueAtTime(40,t+offset+.15);
+      g.gain.setValueAtTime(.25,t+offset);
+      g.gain.exponentialRampToValueAtTime(.01,t+offset+.2);
+      o.connect(g);g.connect(c.destination);o.start(t+offset);o.stop(t+offset+.25);
     });
   }
 }
@@ -693,6 +738,56 @@ function buildMushroom(){
     ep.position.set(x,0.35,0.26); g.add(ep);
   });
   g.userData.type="mushroom"; return g;
+}
+
+function buildBomb(){
+  const g = new THREE.Group();
+  // Black bomb sphere
+  const bombMat=new THREE.MeshPhongMaterial({color:0x1a1a1a,shininess:60});
+  const body=new THREE.Mesh(new THREE.SphereGeometry(0.4,10,10),bombMat);
+  body.position.y=0.5; g.add(body);
+  // Fuse on top
+  const fuseMat=new THREE.MeshPhongMaterial({color:0x8d6e63});
+  const fuse=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,0.3,4),fuseMat);
+  fuse.position.set(0,0.95,0); g.add(fuse);
+  // Spark at tip
+  const spark=new THREE.Mesh(new THREE.SphereGeometry(0.06,4,4),
+    new THREE.MeshPhongMaterial({color:0xff6d00,emissive:0xff6d00,emissiveIntensity:1}));
+  spark.position.set(0,1.12,0);spark.name="bombSpark"; g.add(spark);
+  // Skull emoji label
+  const sc=document.createElement("canvas");sc.width=64;sc.height=64;
+  const sx=sc.getContext("2d");
+  sx.font="48px sans-serif";sx.textAlign="center";sx.fillText("\uD83D\uDCA3",32,50);
+  const tex=new THREE.CanvasTexture(sc);
+  const label=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,transparent:true}));
+  label.scale.set(0.8,0.8,1);label.position.set(0,1.4,0); g.add(label);
+  g.userData.type="bomb"; return g;
+}
+
+function buildCactus(){
+  const g=new THREE.Group();
+  const cm=new THREE.MeshPhongMaterial({color:0x2e7d32});
+  // Main trunk
+  const trunk=new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.3,2.5,8),cm);
+  trunk.position.y=1.25; g.add(trunk);
+  // Round top
+  const top=new THREE.Mesh(new THREE.SphereGeometry(0.3,6,6),cm);
+  top.position.y=2.6; g.add(top);
+  // Left arm
+  const armL=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.18,1,6),cm);
+  armL.position.set(-0.5,1.8,0);armL.rotation.z=Math.PI/3; g.add(armL);
+  const tipL=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.15,0.6,6),cm);
+  tipL.position.set(-0.85,2.3,0); g.add(tipL);
+  const topL=new THREE.Mesh(new THREE.SphereGeometry(0.15,4,4),cm);
+  topL.position.set(-0.85,2.65,0); g.add(topL);
+  // Right arm
+  const armR=new THREE.Mesh(new THREE.CylinderGeometry(0.15,0.18,0.8,6),cm);
+  armR.position.set(0.45,1.4,0);armR.rotation.z=-Math.PI/3.5; g.add(armR);
+  const tipR=new THREE.Mesh(new THREE.CylinderGeometry(0.12,0.15,0.5,6),cm);
+  tipR.position.set(0.75,1.8,0); g.add(tipR);
+  const topR=new THREE.Mesh(new THREE.SphereGeometry(0.13,4,4),cm);
+  topR.position.set(0.75,2.1,0); g.add(topR);
+  g.userData.type="cactus"; return g;
 }
 
 /* Loco objects */
@@ -1596,15 +1691,34 @@ export class EstrellaGame {
   }
 
   _spawnScenery(z){
-    const builders=[buildRestaurant, buildBirrieria, buildPanaderia, buildSupermercado,
-      buildCarneceria, buildFleaMarket, buildPark,
-      buildPaletero, buildFishSeller, buildTamaleStand, buildDancers,
-      buildConcreteBuilding, buildConcreteBuilding, buildConcreteBuilding];
+    let builders;
+    if(this.currentLevel===3){
+      // Desert: lots of cacti
+      builders=[buildCactus,buildCactus,buildCactus,buildCactus,buildCactus,
+        buildRestaurant,buildBirrieria,buildPanaderia,buildCarneceria];
+    } else {
+      builders=[buildRestaurant, buildBirrieria, buildPanaderia, buildSupermercado,
+        buildCarneceria, buildFleaMarket, buildPark,
+        buildPaletero, buildFishSeller, buildTamaleStand, buildDancers,
+        buildConcreteBuilding, buildConcreteBuilding, buildConcreteBuilding];
+    }
     this._sceneryCount = (this._sceneryCount||0)+1;
     const makeOne=(side)=>{
       const b=builders[Math.floor(Math.random()*builders.length)]();
       const x=side*(ROAD_W/2+6+Math.random()*3);
       b.position.set(x, 0, z);
+      // Neon outlines for cosmic level
+      if(this._neonMode){
+        const neonColors=[0xff00ff,0x00ffff,0x00ff00,0xff6600,0xffff00];
+        const neonCol=neonColors[Math.floor(Math.random()*neonColors.length)];
+        b.traverse(c=>{
+          if(c.material&&!c.material.map){
+            c.material=c.material.clone();
+            c.material.emissive=new THREE.Color(neonCol);
+            c.material.emissiveIntensity=0.5;
+          }
+        });
+      }
       this.scene.add(b);
       return b;
     };
@@ -1619,12 +1733,22 @@ export class EstrellaGame {
       if(side<0) this.sceneryLeft.push(sign);
       else this.sceneryRight.push(sign);
     }
-    // Every 7th spawn, add a Chicago River crossing
-    if(this._sceneryCount%7===0){
+    // Every 7th spawn, add a Chicago River crossing (only Chicago level)
+    if(this._sceneryCount%7===0&&this.currentLevel===1){
       const river=buildChicagoRiver();
       river.position.set(0, -0.02, z-8);
       this.scene.add(river);
       this.sceneryLeft.push(river);
+    }
+    // Desert level: extra cacti along roadside
+    if(this.currentLevel===3&&this._sceneryCount%2===0){
+      [-1,1].forEach(side=>{
+        const c=buildCactus();
+        c.position.set(side*(ROAD_W/2+2+Math.random()*2),0,z+Math.random()*10-5);
+        this.scene.add(c);
+        if(side<0) this.sceneryLeft.push(c);
+        else this.sceneryRight.push(c);
+      });
     }
   }
 
@@ -1651,6 +1775,7 @@ export class EstrellaGame {
   /* Intro */
   startIntro(){
     this.state="intro";this.introTimer=0;
+    sfx.init();sfx.bullsIntro();
     this._introCars.forEach(c=>this.scene.remove(c));
     this._introLabels.forEach(c=>this.scene.remove(c));
     this._introCars=[];this._introLabels=[];
@@ -1801,6 +1926,8 @@ export class EstrellaGame {
     if(Math.random()<0.006){const s=buildStarPickup();const lane=Math.floor(Math.random()*cfg.lanes);s.position.set(this._laneX(lane),0,-ROAD_LEN/2);this.scene.add(s);this.pickups.push(s);}
     // Spawn mushrooms
     if(Math.random()<0.003){const m=buildMushroom();const lane=Math.floor(Math.random()*cfg.lanes);m.position.set(this._laneX(lane),0,-ROAD_LEN/2);this.scene.add(m);this.pickups.push(m);}
+    // Spawn bombs
+    if(Math.random()<0.002){const b=buildBomb();const lane=Math.floor(Math.random()*cfg.lanes);b.position.set(this._laneX(lane),0,-ROAD_LEN/2);this.scene.add(b);this.pickups.push(b);}
     // Update enemies
     for(let i=this.obstacles.length-1;i>=0;i--){
       const o=this.obstacles[i];
@@ -1822,7 +1949,7 @@ export class EstrellaGame {
             sfx.squish();
             o.scale.set(1.3,0.15,1.3);
             o.position.y=0.1;
-            this.score+=100;
+            this._coinsEarned+=10;
             setTimeout(()=>{this.scene.remove(o);},800);
             this.obstacles.splice(i,1);
             continue;
@@ -1837,13 +1964,14 @@ export class EstrellaGame {
       r.position.z+=effectiveSpeed*dt;
       if(r.userData.type==="star")r.rotation.y+=dt*3;
       if(r.userData.type==="mushroom")r.rotation.y+=dt*2;
+      if(r.userData.type==="bomb"){r.rotation.y+=dt*1.5;r.traverse(c=>{if(c.name==="bombSpark")c.material.emissiveIntensity=0.5+Math.sin(Date.now()*0.01)*0.5;});}
       if(r.position.z>15){this.scene.remove(r);this.pickups.splice(i,1);continue;}
       const dx=Math.abs(r.position.x-this.playerCar.position.x);
       const dz=Math.abs(r.position.z-this.playerCar.position.z);
       if(dx<1.8&&dz<2.5){
         const type=r.userData.type;
         if(type==="star"){
-          this.score+=150;sfx.starChime();sfx.powerupMusic();
+          sfx.starChime();sfx.powerupMusic();
           const dur=3+this._powerupBonus;
           this.invincible=Math.max(this.invincible,dur);
           this._starGlow=dur;
@@ -1853,6 +1981,15 @@ export class EstrellaGame {
           sfx.mushroomSound();this._bigMode=3+this._powerupBonus;
           if(this.playerCar) this.playerCar.scale.set(1.5,1.5,1.5);
           this._coinsEarned+=5;
+        }
+        else if(type==="bomb"){
+          sfx.explosion();
+          // Explosion visual
+          const exp=new THREE.Mesh(new THREE.SphereGeometry(2,8,8),
+            new THREE.MeshBasicMaterial({color:0xff6600,transparent:true,opacity:0.8}));
+          exp.position.copy(r.position);this.scene.add(exp);
+          setTimeout(()=>this.scene.remove(exp),300);
+          this._crash();return;
         }
         else if(type==="ramp"&&!this.airborne){this.airborne=true;this.jumpVelocity=18;this.jumpY=0.1;sfx.boing();this.speed+=10;}
         if(type!=="ramp"){this.scene.remove(r);this.pickups.splice(i,1);}
@@ -1879,7 +2016,7 @@ export class EstrellaGame {
     }
     if(this.invincible>0){this.invincible-=dt;if(this.playerCar&&!this._starGlow)this.playerCar.visible=Math.sin(Date.now()*0.02)>0;}
     else if(this.playerCar)this.playerCar.visible=true;
-    this.score+=effectiveSpeed*dt*0.5;
+    this._coinsEarned+=effectiveSpeed*dt*0.02; // distance-based coins
     sfx.engine(effectiveSpeed);
     // Update sparks from missing wheel
     if(this._sparks&&this._missingWheelSide){
@@ -1926,7 +2063,7 @@ export class EstrellaGame {
     const effectiveSpeed=this.speed*Math.max(0.3,speedMod);
     this.roadTex.offset.y-=effectiveSpeed*dt*0.08;
     this.dist+=effectiveSpeed*dt;
-    this.score+=effectiveSpeed*dt*0.3;
+    this._coinsEarned+=effectiveSpeed*dt*0.015;
     this._updateLighting(this.dist/5000);
     this._updateScenery(effectiveSpeed,dt);
     if(this.spawnCooldown>0)this.spawnCooldown-=dt;
@@ -1946,7 +2083,7 @@ export class EstrellaGame {
         if(dx<1.5&&dz<2){
           const type=o.userData.type||"cone";
           if(type==="chicken")sfx.squawk();else if(type==="hydrant"||type==="barrel")sfx.clang();else sfx.crash();
-          this.score+=200;this.damage++;this._removePart();
+          this._coinsEarned+=15;this.damage++;this._removePart();
           this.scene.remove(o);this.locoObjs.splice(i,1);
           this.invincible=0.5;
           if(this.damage>=10){this._endGame(false,"Car destroyed!");return;}
@@ -2248,9 +2385,7 @@ export class EstrellaGame {
     this.sceneryLeft.forEach(s=>this.scene.remove(s));this.sceneryLeft=[];
     this.sceneryRight.forEach(s=>this.scene.remove(s));this.sceneryRight=[];
     // Award coins based on score and completion
-    const baseCoins=Math.floor(this.score*0.1)+(this._coinsEarned||0);
-    const bonus=win?50:0;
-    const totalCoins=baseCoins+bonus;
+    const totalCoins=Math.floor(this._coinsEarned||0)+(win?50:0);
     const save=loadSave();
     save.coins+=totalCoins;
     // Unlock next level on victory
@@ -2258,7 +2393,7 @@ export class EstrellaGame {
       save.levelsUnlocked++;
     }
     saveSave(save);
-    if(this.onEnd)this.onEnd(win,msg,Math.floor(this.score),totalCoins,save);
+    if(this.onEnd)this.onEnd(win,msg,totalCoins,save);
   }
 
   renderIdle(){

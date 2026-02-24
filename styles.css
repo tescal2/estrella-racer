@@ -59,6 +59,7 @@ html,body{width:100%;height:100%;overflow:hidden;background:#0a0e2a;font-family:
 /* Result */
 #resultPanel{background:rgba(10,14,42,.88);backdrop-filter:blur(12px)}
 #resultTitle{font-size:28px;font-weight:900;color:#ffe14d}
-#resultMsg{font-size:16px;color:#ccc}
+#resultMsg{font-size:16px;color:#ff9800;font-weight:700;text-shadow:2px 2px 4px rgba(0,0,0,.5);white-space:pre-line}
+#resultMsg p{color:#ff9800;font-weight:700;text-shadow:2px 2px 4px rgba(0,0,0,.5)}
 #resultScore{font-size:22px;font-weight:700}
 .actionBtn{padding:14px 36px;border:none;border-radius:12px;font-size:18px;font-weight:800;background:linear-gradient(135deg,#00c853,#00e676);color:#0a0e2a;cursor:pointer}

@@ -548,6 +548,16 @@ function buildCar(color, isPlayer, driverName){
     const rim = new THREE.Mesh(rimGeo, rimMat);
     rim.rotation.z=Math.PI/2; rim.position.set(p[0],p[1],p[2]); g.add(rim);
   });
+  // Tail lights (all cars get these)
+  const tlGeo = new THREE.SphereGeometry(0.15, 8, 8);
+  const tlMat = new THREE.MeshPhongMaterial({color:0xff0000, emissive:0xff0000, emissiveIntensity:0.9});
+  [-0.8,0.8].forEach(x=>{
+    const tl = new THREE.Mesh(tlGeo, tlMat);
+    tl.position.set(x, 0.65, -CAR_LEN/2); tl.name="taillight"; g.add(tl);
+    // Tail light glow point light
+    const tlLight = new THREE.PointLight(0xff0000, 0.4, 4);
+    tlLight.position.set(x, 0.65, -CAR_LEN/2-0.2); g.add(tlLight);
+  });
   if(isPlayer){
     const spPost = new THREE.Mesh(new THREE.BoxGeometry(0.08,0.4,0.08), fMat);
     [-.8,.8].forEach(x=>{ const s=spPost.clone(); s.position.set(x,1.15,-1.6); g.add(s); });
@@ -582,41 +592,35 @@ function buildCar(color, isPlayer, driverName){
       const tooth = new THREE.Mesh(new THREE.BoxGeometry(0.14,0.12,0.06), teethMat);
       tooth.position.set(i*0.18, 0.42, CAR_LEN/2+0.05); g.add(tooth);
     }
-    const tlGeo = new THREE.SphereGeometry(0.12, 6, 6);
-    const tlMat = new THREE.MeshPhongMaterial({color:0xff0000, emissive:0xff0000, emissiveIntensity:0.6});
-    [-0.8,0.8].forEach(x=>{
-      const tl = new THREE.Mesh(tlGeo, tlMat);
-      tl.position.set(x, 0.65, -CAR_LEN/2); tl.name="taillight"; g.add(tl);
-    });
     const exGeo = new THREE.CylinderGeometry(0.06,0.08,0.3,8);
     const exMat = new THREE.MeshPhongMaterial({color:0x666666});
     [-.5,.5].forEach(x=>{
       const ex = new THREE.Mesh(exGeo, exMat);
       ex.rotation.x=Math.PI/2; ex.position.set(x,0.3,-CAR_LEN/2-0.1); g.add(ex);
     });
-    // License plate with driver name
+    // License plate with driver name (large, clearly visible)
     if(driverName){
       const plateCanvas = document.createElement("canvas");
-      plateCanvas.width = 128; plateCanvas.height = 40;
+      plateCanvas.width = 256; plateCanvas.height = 80;
       const pctx = plateCanvas.getContext("2d");
       pctx.fillStyle = "#fff";
-      pctx.fillRect(0,0,128,40);
-      pctx.strokeStyle = "#333";
-      pctx.lineWidth = 3;
-      pctx.strokeRect(2,2,124,36);
+      pctx.fillRect(0,0,256,80);
+      pctx.strokeStyle = "#1a237e";
+      pctx.lineWidth = 5;
+      pctx.strokeRect(3,3,250,74);
       pctx.fillStyle = "#1a237e";
-      pctx.font = "bold 24px sans-serif";
+      pctx.font = "bold 48px sans-serif";
       pctx.textAlign = "center";
       pctx.textBaseline = "middle";
-      pctx.fillText(driverName.toUpperCase(), 64, 22);
+      pctx.fillText(driverName.toUpperCase(), 128, 42);
       const plateTex = new THREE.CanvasTexture(plateCanvas);
       const plateMat = new THREE.MeshBasicMaterial({map:plateTex});
-      const plate = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.3), plateMat);
-      plate.position.set(0, 0.45, -CAR_LEN/2-0.01);
+      const plate = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.4), plateMat);
+      plate.position.set(0, 0.42, -CAR_LEN/2-0.02);
       g.add(plate);
       // Front plate too
       const fp = plate.clone();
-      fp.position.set(0, 0.45, CAR_LEN/2+0.01);
+      fp.position.set(0, 0.42, CAR_LEN/2+0.02);
       g.add(fp);
     }
     // Driver visible in the car
@@ -2133,11 +2137,21 @@ export class EstrellaGame {
         }
         else if(type==="bomb"){
           sfx.explosion();
-          // Explosion visual
-          const exp=new THREE.Mesh(new THREE.SphereGeometry(2,8,8),
-            new THREE.MeshBasicMaterial({color:0xff6600,transparent:true,opacity:0.8}));
+          // Remove bomb immediately from pickups
+          this.scene.remove(r);this.pickups.splice(i,1);
+          // Big explosion visual that grows then fades
+          const exp=new THREE.Mesh(new THREE.SphereGeometry(1.5,12,12),
+            new THREE.MeshBasicMaterial({color:0xff6600,transparent:true,opacity:0.9}));
           exp.position.copy(r.position);this.scene.add(exp);
-          setTimeout(()=>this.scene.remove(exp),300);
+          let expT=0;
+          const expandExp=()=>{
+            expT+=0.016;
+            exp.scale.setScalar(1+expT*8);
+            exp.material.opacity=Math.max(0,0.9-expT*1.5);
+            if(expT<0.7) requestAnimationFrame(expandExp);
+            else this.scene.remove(exp);
+          };
+          expandExp();
           this._crash();return;
         }
         else if(type==="ramp"&&!this.airborne){this.airborne=true;this.jumpVelocity=18;this.jumpY=0.1;sfx.boing();this.speed+=10;}
@@ -2505,8 +2519,13 @@ export class EstrellaGame {
 
   togglePause(){
     this.paused=!this.paused;
-    if(this.paused){sfx.stopEngine();sfx.stopMusic();}
-    else{sfx.music();sfx.engine(this.speed);}
+    if(this.paused){
+      sfx.stopEngine();sfx.stopMusic();
+      if(sfx.ctx&&sfx.ctx.state==="running") sfx.ctx.suspend();
+    } else {
+      if(sfx.ctx&&sfx.ctx.state==="suspended") sfx.ctx.resume();
+      sfx.music();sfx.engine(this.speed);
+    }
     return this.paused;
   }
 }

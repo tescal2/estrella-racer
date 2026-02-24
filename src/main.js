@@ -11,9 +11,16 @@ let currentLevel = 1;
 let useGolden = false;
 let animFrame = null;
 
-/* Draw canvas avatars as fallback */
-drawAvatar($("avatarAxel"), "axel");
-drawAvatar($("avatarJade"), "jade");
+/* Draw canvas avatars with animation loop */
+let _avatarFrame = 0;
+let _avatarAnimId = null;
+function animateAvatars(){
+  _avatarFrame++;
+  drawAvatar($("avatarAxel"), "axel", _avatarFrame);
+  drawAvatar($("avatarJade"), "jade", _avatarFrame);
+  _avatarAnimId = requestAnimationFrame(animateAvatars);
+}
+animateAvatars();
 
 /* Try loading actual photo */
 (function tryLoadPhoto(){
@@ -89,6 +96,7 @@ $("playBtn").addEventListener("click", () => {
     show($("selectPanel"), true);
     game.state = "idle";
     updateShopUI();
+    sfx.crowdCheer();
   }, 4500);
 });
 
@@ -141,6 +149,8 @@ document.querySelectorAll(".diffPill").forEach(btn => {
 
 /* Start game */
 function launchGame(mode){
+  sfx.stopCrowd();
+  if(_avatarAnimId){cancelAnimationFrame(_avatarAnimId);_avatarAnimId=null;}
   show($("selectPanel"), false);
   show($("hud"), true);
   show($("resultPanel"), false);
@@ -150,7 +160,6 @@ function launchGame(mode){
 }
 
 $("goRace").addEventListener("click", () => launchGame("race"));
-$("goLoco").addEventListener("click", () => launchGame("loco"));
 
 /* HUD update */
 function updateHUD(){

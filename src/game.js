@@ -275,10 +275,39 @@ class SoundFX {
       o.connect(g);g.connect(c.destination);o.start(t+offset);o.stop(t+offset+.25);
     });
   }
+  crowdCheer(){
+    // Stadium crowd cheering - noise bursts with rising/falling waves
+    this.init();if(this.muted||!this.ctx)return;
+    const c=this.ctx,t=c.currentTime;
+    this._crowdNode=[];
+    // Multiple noise sources with different envelopes for crowd wave effect
+    for(let w=0;w<6;w++){
+      const buf=c.createBuffer(1,c.sampleRate*2,c.sampleRate);
+      const d=buf.getChannelData(0);
+      for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.15;
+      const n=c.createBufferSource();n.buffer=buf;n.loop=true;
+      const g=c.createGain();
+      const filter=c.createBiquadFilter();
+      filter.type="bandpass";filter.frequency.value=800+w*400;filter.Q.value=0.5;
+      // Wave envelope
+      g.gain.setValueAtTime(0.01,t);
+      const offset=w*0.4;
+      for(let i=0;i<4;i++){
+        const st=t+offset+i*1.8;
+        g.gain.linearRampToValueAtTime(0.08+Math.random()*0.04,st+0.3);
+        g.gain.linearRampToValueAtTime(0.02,st+1.5);
+      }
+      n.connect(filter);filter.connect(g);g.connect(c.destination);
+      n.start(t);this._crowdNode.push(n);
+    }
+  }
+  stopCrowd(){
+    if(this._crowdNode){this._crowdNode.forEach(n=>{try{n.stop();}catch(e){}});this._crowdNode=null;}
+  }
 }
 export const sfx = new SoundFX();
-/* Avatar drawing - detailed */
-export function drawAvatar(canvas, who){
+/* Avatar drawing - detailed, with animation frame */
+export function drawAvatar(canvas, who, frame=0){
   const ctx=canvas.getContext("2d");
   const w=canvas.width, h=canvas.height;
   ctx.clearRect(0,0,w,h);
@@ -340,14 +369,14 @@ export function drawAvatar(canvas, who){
     ctx.fillStyle="rgba(255,255,255,0.07)";
     ctx.beginPath();ctx.ellipse(cx-6,cy-38,8,10,0,0,Math.PI*2);ctx.fill();
   }
-  // Eyebrows
+  // Eyebrows - raised and happy
   ctx.strokeStyle=hair;ctx.lineWidth=2.8;
-  ctx.beginPath();ctx.moveTo(cx-20,cy-12);ctx.quadraticCurveTo(cx-12,cy-17,cx-4,cy-12);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(cx+4,cy-12);ctx.quadraticCurveTo(cx+12,cy-17,cx+20,cy-12);ctx.stroke();
-  // Eyes with detail
+  ctx.beginPath();ctx.moveTo(cx-20,cy-14);ctx.quadraticCurveTo(cx-12,cy-19,cx-4,cy-14);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx+4,cy-14);ctx.quadraticCurveTo(cx+12,cy-19,cx+20,cy-14);ctx.stroke();
+  // Eyes with detail - squinted happy eyes
   ctx.fillStyle="#fff";
-  ctx.beginPath();ctx.ellipse(cx-12,cy,8,6.5,0,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.ellipse(cx+12,cy,8,6.5,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(cx-12,cy,8,5.5,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(cx+12,cy,8,5.5,0,0,Math.PI*2);ctx.fill();
   // Iris
   ctx.fillStyle="#3e2723";
   ctx.beginPath();ctx.arc(cx-11,cy+0.5,4,0,Math.PI*2);ctx.fill();
@@ -373,29 +402,29 @@ export function drawAvatar(canvas, who){
   ctx.fillStyle=skinShadow;
   ctx.beginPath();ctx.ellipse(cx-3,cy+16,2,1.5,0,0,Math.PI*2);ctx.fill();
   ctx.beginPath();ctx.ellipse(cx+3,cy+16,2,1.5,0,0,Math.PI*2);ctx.fill();
-  // Mouth/smile - big happy grin
+  // Mouth - wide open laughing smile
   ctx.fillStyle="#c0604a";
-  ctx.beginPath();ctx.ellipse(cx,cy+23,14,9,0,0,Math.PI);ctx.fill();
-  // Upper lip line
-  ctx.strokeStyle="#a04030";ctx.lineWidth=1.2;
-  ctx.beginPath();ctx.ellipse(cx,cy+23,14,2,0,Math.PI,0);ctx.stroke();
-  // Teeth showing in wide smile
+  ctx.beginPath();ctx.ellipse(cx,cy+24,16,11,0,0,Math.PI);ctx.fill();
+  // Upper lip - gentle curve
+  ctx.strokeStyle="#a04030";ctx.lineWidth=1.5;
+  ctx.beginPath();ctx.moveTo(cx-16,cy+24);ctx.quadraticCurveTo(cx,cy+20,cx+16,cy+24);ctx.stroke();
+  // Teeth - top row
   ctx.fillStyle="#fff";
-  ctx.fillRect(cx-9,cy+23,18,5);
-  // Tooth lines
-  ctx.strokeStyle="rgba(200,200,200,0.4)";ctx.lineWidth=0.5;
-  for(let tx=-6;tx<=6;tx+=3){ctx.beginPath();ctx.moveTo(cx+tx,cy+23);ctx.lineTo(cx+tx,cy+28);ctx.stroke();}
-  // Tongue hint
+  ctx.beginPath();
+  ctx.moveTo(cx-12,cy+24);ctx.lineTo(cx+12,cy+24);
+  ctx.lineTo(cx+10,cy+29);ctx.lineTo(cx-10,cy+29);
+  ctx.closePath();ctx.fill();
+  // Tongue visible in open mouth
   ctx.fillStyle="#e57373";
-  ctx.beginPath();ctx.ellipse(cx,cy+30,5,3,0,0,Math.PI);ctx.fill();
-  // Cheek blush for happy look
-  ctx.fillStyle="rgba(255,120,100,0.2)";
-  ctx.beginPath();ctx.ellipse(cx-18,cy+18,7,4,0,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.ellipse(cx+18,cy+18,7,4,0,0,Math.PI*2);ctx.fill();
-  // Smile creases
-  ctx.strokeStyle="rgba(0,0,0,0.08)";ctx.lineWidth=1;
-  ctx.beginPath();ctx.arc(cx-14,cy+20,6,0.3,1.2);ctx.stroke();
-  ctx.beginPath();ctx.arc(cx+14,cy+20,6,Math.PI-1.2,Math.PI-0.3);ctx.stroke();
+  ctx.beginPath();ctx.ellipse(cx,cy+32,8,5,0,0,Math.PI);ctx.fill();
+  // Cheek dimples
+  ctx.fillStyle="rgba(255,120,100,0.25)";
+  ctx.beginPath();ctx.ellipse(cx-20,cy+18,8,5,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(cx+20,cy+18,8,5,0,0,Math.PI*2);ctx.fill();
+  // Laugh lines
+  ctx.strokeStyle="rgba(0,0,0,0.06)";ctx.lineWidth=1;
+  ctx.beginPath();ctx.arc(cx-16,cy+20,8,0.2,1.3);ctx.stroke();
+  ctx.beginPath();ctx.arc(cx+16,cy+20,8,Math.PI-1.3,Math.PI-0.2);ctx.stroke();
   // Neck
   ctx.fillStyle=skin;ctx.fillRect(cx-9,cy+35,18,16);
   ctx.fillStyle=skinShadow;ctx.fillRect(cx-9,cy+35,18,3);
@@ -414,6 +443,44 @@ export function drawAvatar(canvas, who){
   // Name on shirt
   ctx.fillStyle="#fff";ctx.font="bold 14px sans-serif";ctx.textAlign="center";
   ctx.fillText(who==="jade"?"JADE":"AXEL",cx,cy+72);
+  // Animated pose (frame-based)
+  if(frame>0){
+    const t=frame*0.05; // animation time
+    ctx.fillStyle=skin;
+    if(who==="jade"){
+      // Supergirl pose: left hand on hip, right arm up, head nod
+      const nod=Math.sin(t*3)*3;
+      // Redraw head slightly tilted
+      ctx.save();ctx.translate(cx,cy);ctx.rotate(Math.sin(t*2)*0.05);ctx.translate(-cx,-cy);
+      // Left arm on hip
+      ctx.strokeStyle=shirtColor;ctx.lineWidth=6;
+      ctx.beginPath();ctx.moveTo(cx-20,cy+55);ctx.quadraticCurveTo(cx-35,cy+55,cx-38,cy+65);ctx.stroke();
+      ctx.fillStyle=skin;
+      ctx.beginPath();ctx.arc(cx-38,cy+66,4,0,Math.PI*2);ctx.fill();
+      // Right arm up - fist in the sky
+      const armAngle=Math.sin(t*1.5)*0.08;
+      ctx.strokeStyle=shirtColor;ctx.lineWidth=6;
+      ctx.beginPath();ctx.moveTo(cx+20,cy+55);ctx.quadraticCurveTo(cx+30,cy+30+nod,cx+25,cy-5+nod);ctx.stroke();
+      ctx.fillStyle=skin;
+      ctx.beginPath();ctx.arc(cx+25,cy-8+nod,5,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+    } else {
+      // Axel: 6-7 hand motion (palms up alternating)
+      const phase=Math.sin(t*4);
+      const leftY=cy+60+phase*12;
+      const rightY=cy+60-phase*12;
+      // Left arm
+      ctx.strokeStyle=shirtColor;ctx.lineWidth=6;
+      ctx.beginPath();ctx.moveTo(cx-20,cy+55);ctx.quadraticCurveTo(cx-30,leftY-5,cx-28,leftY);ctx.stroke();
+      ctx.fillStyle=skin;
+      ctx.beginPath();ctx.ellipse(cx-28,leftY,5,3,phase*0.3,0,Math.PI*2);ctx.fill();
+      // Right arm
+      ctx.strokeStyle=shirtColor;ctx.lineWidth=6;
+      ctx.beginPath();ctx.moveTo(cx+20,cy+55);ctx.quadraticCurveTo(cx+30,rightY-5,cx+28,rightY);ctx.stroke();
+      ctx.fillStyle=skin;
+      ctx.beginPath();ctx.ellipse(cx+28,rightY,5,3,-phase*0.3,0,Math.PI*2);ctx.fill();
+    }
+  }
 }
 /* 3D Car builder with license plate */
 function buildCar(color, isPlayer, driverName){
@@ -1855,6 +1922,16 @@ export class EstrellaGame {
     this.sceneryRight.forEach(s=>this.scene.remove(s));this.sceneryRight=[];
     // Pre-spawn scenery
     for(let z=-20;z>-200;z-=30) this._spawnScenery(z);
+    // Pre-spawn initial enemies at start
+    for(let ez=-60;ez>-180;ez-=40){
+      const lane=Math.floor(Math.random()*cfg.lanes);
+      const lx=(lane-(cfg.lanes-1)/2)*LANE_W;
+      const colors=[0x2196f3,0x4caf50,0xff9800,0x9c27b0,0xf44336,0x00bcd4];
+      const cc=colors[Math.floor(Math.random()*colors.length)];
+      const enemy=buildCar(cc,false);
+      enemy.position.set(lx,0,ez);
+      this.scene.add(enemy);this.obstacles.push(enemy);
+    }
     // Silhouette
     if(this.silhouette)this.scene.remove(this.silhouette);
     this.silhouette=buildSkyMessage(driver);
@@ -1866,10 +1943,22 @@ export class EstrellaGame {
     // Player car
     if(this.playerCar)this.scene.remove(this.playerCar);
     let pColor=driver==="axel"?0xcc0000:0x6a1b9a;
-    if(this.isGolden) pColor=0xffd700;
+    if(this.isGolden) pColor=0xdaa520; // deeper gold
     this.playerCar=buildCar(pColor,true,driver);
     this.playerCar.rotation.y=Math.PI;
     this.playerCar.position.set(0,0,0);
+    // Golden car: gold wheels and shiny material
+    if(this.isGolden&&this.playerCar){
+      this.playerCar.traverse(c=>{
+        if(c.name==="body"&&c.material){
+          c.material=new THREE.MeshPhongMaterial({color:0xdaa520,shininess:200,specular:0xffffaa,emissive:0x332200,emissiveIntensity:0.15});
+          c.name="body";
+        }
+        if(c.name==="wheel"&&c.material){
+          c.material=new THREE.MeshPhongMaterial({color:0xdaa520,shininess:180,specular:0xffdd44});
+        }
+      });
+    }
     this.scene.add(this.playerCar);
     // Neon mode: add glow to car in cosmic level
     if(this._neonMode&&this.playerCar){
@@ -1887,7 +1976,6 @@ export class EstrellaGame {
     if(this.state==="crashing"){this._updateCrashAnim(dt);return;}
     if(this.state!=="playing"||this.paused)return;
     if(this.mode==="race")this._updateRace(dt);
-    else this._updateLoco(dt);
   }
 
   _updateRace(dt){
@@ -1897,6 +1985,15 @@ export class EstrellaGame {
     const halfRoad=(cfg.lanes*LANE_W)/2;
     const steerSpeed=this.isGolden?20:15;
     if(!this.airborne) this.playerCar.position.x=Math.max(-halfRoad,Math.min(halfRoad,px+this.tiltSide*dt*steerSpeed));
+    // Golden shine sweep
+    if(this.isGolden&&this.playerCar){
+      const shineT=(Date.now()%2000)/2000;
+      this.playerCar.traverse(c=>{
+        if(c.name==="body"&&c.material&&c.material.emissiveIntensity!==undefined){
+          c.material.emissiveIntensity=0.1+Math.sin(shineT*Math.PI*2)*0.15;
+        }
+      });
+    }
     const speedMod=1+this.tiltFwd*0.3;
     const effectiveSpeed=this.speed*Math.max(0.3,speedMod);
     this.dist+=effectiveSpeed*dt;
@@ -1945,13 +2042,34 @@ export class EstrellaGame {
         const dz=Math.abs(o.position.z-this.playerCar.position.z);
         if(dx<1.8&&dz<CAR_LEN){
           if(this._bigMode>0){
-            // Smash and flatten the car
+            // Smash: squish + shake in air + fling to side
             sfx.squish();
-            o.scale.set(1.3,0.15,1.3);
-            o.position.y=0.1;
             this._coinsEarned+=10;
-            setTimeout(()=>{this.scene.remove(o);},800);
             this.obstacles.splice(i,1);
+            const smashedCar=o;
+            const throwDir=o.position.x>this.playerCar.position.x?1:-1;
+            let phase=0; // 0=flatten, 1=shake up, 2=fling
+            let timer=0;
+            const smashAnim=()=>{
+              timer+=0.016;
+              if(phase===0){
+                smashedCar.scale.set(1.3,Math.max(0.15,1-timer*8),1.3);
+                smashedCar.position.y=0.1;
+                if(timer>0.2){phase=1;timer=0;sfx.thud();}
+              } else if(phase===1){
+                smashedCar.position.y=0.1+timer*6;
+                smashedCar.rotation.x=Math.sin(timer*40)*0.3;
+                smashedCar.rotation.z=Math.sin(timer*35)*0.3;
+                if(timer>0.5){phase=2;timer=0;sfx.boing();}
+              } else {
+                smashedCar.position.x+=throwDir*timer*20;
+                smashedCar.position.y=Math.max(0,smashedCar.position.y-timer*3);
+                smashedCar.rotation.z+=throwDir*0.15;
+                if(timer>0.6){this.scene.remove(smashedCar);return;}
+              }
+              requestAnimationFrame(smashAnim);
+            };
+            smashAnim();
             continue;
           }
           this._crash();return;
@@ -2051,58 +2169,6 @@ export class EstrellaGame {
     if(this.finishFlag)this.finishFlag.position.z+=effectiveSpeed*dt;
     // Victory when car crosses finish line
     if(this.finishFlag&&this.finishFlag.position.z>=0){this._startVictory();return;}
-    this.skyline.willis.traverse(c=>{if(c.name==="blink")c.material.emissiveIntensity=.5+.5*Math.sin(Date.now()*.003);});
-    this.renderer.render(this.scene,this.camera);
-  }
-  _updateLoco(dt){
-    const cfg=DIFF[this.diff];
-    this.speed=40*cfg.speed;
-    const px=this.playerCar.position.x;
-    this.playerCar.position.x=Math.max(-15,Math.min(15,px+this.tiltSide*dt*18));
-    const speedMod=1+this.tiltFwd*0.3;
-    const effectiveSpeed=this.speed*Math.max(0.3,speedMod);
-    this.roadTex.offset.y-=effectiveSpeed*dt*0.08;
-    this.dist+=effectiveSpeed*dt;
-    this._coinsEarned+=effectiveSpeed*dt*0.015;
-    this._updateLighting(this.dist/5000);
-    this._updateScenery(effectiveSpeed,dt);
-    if(this.spawnCooldown>0)this.spawnCooldown-=dt;
-    if(this.spawnCooldown<=0&&Math.random()<cfg.spawnRate*0.6){
-      const builders=[buildTree,buildHydrant,buildTrashcan,buildCone,buildBarrel,buildChicken];
-      const obj=builders[Math.floor(Math.random()*builders.length)]();
-      obj.position.set((Math.random()-.5)*ROAD_W,0,-ROAD_LEN/2+Math.random()*30);
-      this.scene.add(obj);this.locoObjs.push(obj);
-    }
-    for(let i=this.locoObjs.length-1;i>=0;i--){
-      const o=this.locoObjs[i];
-      o.position.z+=effectiveSpeed*dt;
-      if(o.position.z>20){this.scene.remove(o);this.locoObjs.splice(i,1);continue;}
-      if(this.invincible<=0){
-        const dx=Math.abs(o.position.x-this.playerCar.position.x);
-        const dz=Math.abs(o.position.z-this.playerCar.position.z);
-        if(dx<1.5&&dz<2){
-          const type=o.userData.type||"cone";
-          if(type==="chicken")sfx.squawk();else if(type==="hydrant"||type==="barrel")sfx.clang();else sfx.crash();
-          this._coinsEarned+=15;this.damage++;this._removePart();
-          this.scene.remove(o);this.locoObjs.splice(i,1);
-          this.invincible=0.5;
-          if(this.damage>=10){this._endGame(false,"Car destroyed!");return;}
-        }
-      }
-    }
-    if(this.invincible>0){this.invincible-=dt;if(this.playerCar)this.playerCar.visible=Math.sin(Date.now()*.02)>0;}
-    else if(this.playerCar)this.playerCar.visible=true;
-    sfx.engine(effectiveSpeed);
-    this.camera.position.x+=(this.playerCar.position.x*0.3-this.camera.position.x)*0.05;
-    if(this.silhouette){
-      this.silhouette.position.x-=dt*8;
-      if(this.silhouette.position.x<-60) this.silhouette.position.x=60;
-      this.silhouette.position.y=35+Math.sin(Date.now()*0.001)*2;
-      this.silhouette.traverse(c=>{
-        if(c.name==="mainRotor")c.rotation.y+=dt*25;
-        if(c.name==="tailRotor")c.rotation.x+=dt*30;
-      });
-    }
     this.skyline.willis.traverse(c=>{if(c.name==="blink")c.material.emissiveIntensity=.5+.5*Math.sin(Date.now()*.003);});
     this.renderer.render(this.scene,this.camera);
   }

@@ -276,32 +276,64 @@ class SoundFX {
     });
   }
   crowdCheer(){
-    // Stadium crowd cheering - noise bursts with rising/falling waves
+    // Stadium crowd: rhythmic claps + cheering voices
     this.init();if(this.muted||!this.ctx)return;
     const c=this.ctx,t=c.currentTime;
     this._crowdNode=[];
-    // Multiple noise sources with different envelopes for crowd wave effect
-    for(let w=0;w<6;w++){
-      const buf=c.createBuffer(1,c.sampleRate*2,c.sampleRate);
-      const d=buf.getChannelData(0);
-      for(let i=0;i<d.length;i++) d[i]=(Math.random()*2-1)*0.15;
-      const n=c.createBufferSource();n.buffer=buf;n.loop=true;
+    // Layer 1: Rhythmic clapping (short noise bursts filtered high)
+    const clapBuf=c.createBuffer(1,c.sampleRate*0.03,c.sampleRate);
+    const cd=clapBuf.getChannelData(0);
+    for(let i=0;i<cd.length;i++) cd[i]=(Math.random()*2-1);
+    for(let rep=0;rep<40;rep++){
+      const n=c.createBufferSource();n.buffer=clapBuf;
       const g=c.createGain();
-      const filter=c.createBiquadFilter();
-      filter.type="bandpass";filter.frequency.value=800+w*400;filter.Q.value=0.5;
-      // Wave envelope
-      g.gain.setValueAtTime(0.01,t);
-      const offset=w*0.4;
-      for(let i=0;i<4;i++){
-        const st=t+offset+i*1.8;
-        g.gain.linearRampToValueAtTime(0.08+Math.random()*0.04,st+0.3);
-        g.gain.linearRampToValueAtTime(0.02,st+1.5);
-      }
-      n.connect(filter);filter.connect(g);g.connect(c.destination);
-      n.start(t);this._crowdNode.push(n);
+      const hp=c.createBiquadFilter();hp.type="highpass";hp.frequency.value=2000+Math.random()*2000;
+      const vol=0.04+Math.random()*0.06;
+      const when=t+rep*0.18+Math.random()*0.06;
+      g.gain.setValueAtTime(vol,when);g.gain.exponentialRampToValueAtTime(0.001,when+0.03);
+      n.connect(hp);hp.connect(g);g.connect(c.destination);
+      n.start(when);this._crowdNode.push(n);
     }
+    // Layer 2: Crowd roar voices (formant-like oscillators with wobble)
+    const vowels=[{f1:700,f2:1200},{f1:500,f2:1800},{f1:300,f2:2500}];
+    vowels.forEach((v,vi)=>{
+      const o1=c.createOscillator(),o2=c.createOscillator();
+      const g1=c.createGain(),g2=c.createGain();
+      const bp1=c.createBiquadFilter();bp1.type="bandpass";bp1.frequency.value=v.f1;bp1.Q.value=5;
+      const bp2=c.createBiquadFilter();bp2.type="bandpass";bp2.frequency.value=v.f2;bp2.Q.value=5;
+      o1.type="sawtooth";o1.frequency.value=120+vi*30;
+      o2.type="sawtooth";o2.frequency.value=125+vi*30;
+      // Wavering cheer envelope
+      for(let i=0;i<6;i++){
+        const st=t+vi*0.5+i*1.2;
+        g1.gain.linearRampToValueAtTime(0.03+Math.random()*0.02,st+0.2);
+        g1.gain.linearRampToValueAtTime(0.005,st+1.0);
+        g2.gain.linearRampToValueAtTime(0.02+Math.random()*0.015,st+0.3);
+        g2.gain.linearRampToValueAtTime(0.003,st+1.0);
+      }
+      g1.gain.setValueAtTime(0.001,t);g2.gain.setValueAtTime(0.001,t);
+      o1.connect(bp1);bp1.connect(g1);g1.connect(c.destination);
+      o2.connect(bp2);bp2.connect(g2);g2.connect(c.destination);
+      o1.start(t);o2.start(t);o1.stop(t+8);o2.stop(t+8);
+      this._crowdNode.push(o1,o2);
+    });
+    // Layer 3: Whistles (high pitched short bursts)
+    for(let w=0;w<4;w++){
+      const o=c.createOscillator(),g=c.createGain();
+      o.type="sine";o.frequency.value=2800+Math.random()*800;
+      const when=t+1+w*1.8+Math.random()*0.5;
+      g.gain.setValueAtTime(0,when);
+      g.gain.linearRampToValueAtTime(0.015,when+0.05);
+      g.gain.linearRampToValueAtTime(0.02,when+0.15);
+      g.gain.linearRampToValueAtTime(0,when+0.3);
+      o.connect(g);g.connect(c.destination);o.start(when);o.stop(when+0.35);
+      this._crowdNode.push(o);
+    }
+    // Loop: restart cheering every 7 seconds
+    this._crowdLoop=setTimeout(()=>{this.stopCrowd();this.crowdCheer();},7000);
   }
   stopCrowd(){
+    if(this._crowdLoop){clearTimeout(this._crowdLoop);this._crowdLoop=null;}
     if(this._crowdNode){this._crowdNode.forEach(n=>{try{n.stop();}catch(e){}});this._crowdNode=null;}
   }
 }
@@ -453,32 +485,31 @@ export function drawAvatar(canvas, who, frame=0){
       // Redraw head slightly tilted
       ctx.save();ctx.translate(cx,cy);ctx.rotate(Math.sin(t*2)*0.05);ctx.translate(-cx,-cy);
       // Left arm on hip
-      ctx.strokeStyle=shirtColor;ctx.lineWidth=6;
-      ctx.beginPath();ctx.moveTo(cx-20,cy+55);ctx.quadraticCurveTo(cx-35,cy+55,cx-38,cy+65);ctx.stroke();
+      ctx.strokeStyle=shirtColor;ctx.lineWidth=7;
+      ctx.beginPath();ctx.moveTo(cx-20,cy+55);ctx.quadraticCurveTo(cx-38,cy+52,cx-42,cy+65);ctx.stroke();
       ctx.fillStyle=skin;
-      ctx.beginPath();ctx.arc(cx-38,cy+66,4,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(cx-42,cy+66,6,0,Math.PI*2);ctx.fill();
       // Right arm up - fist in the sky
-      const armAngle=Math.sin(t*1.5)*0.08;
-      ctx.strokeStyle=shirtColor;ctx.lineWidth=6;
-      ctx.beginPath();ctx.moveTo(cx+20,cy+55);ctx.quadraticCurveTo(cx+30,cy+30+nod,cx+25,cy-5+nod);ctx.stroke();
+      ctx.strokeStyle=shirtColor;ctx.lineWidth=7;
+      ctx.beginPath();ctx.moveTo(cx+20,cy+55);ctx.quadraticCurveTo(cx+32,cy+25+nod,cx+26,cy-12+nod);ctx.stroke();
       ctx.fillStyle=skin;
-      ctx.beginPath();ctx.arc(cx+25,cy-8+nod,5,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.arc(cx+26,cy-15+nod,7,0,Math.PI*2);ctx.fill();
       ctx.restore();
     } else {
-      // Axel: 6-7 hand motion (palms up alternating)
+      // Axel: 6-7 hand motion (palms up alternating) - higher range, longer arms
       const phase=Math.sin(t*4);
-      const leftY=cy+60+phase*12;
-      const rightY=cy+60-phase*12;
-      // Left arm
-      ctx.strokeStyle=shirtColor;ctx.lineWidth=6;
-      ctx.beginPath();ctx.moveTo(cx-20,cy+55);ctx.quadraticCurveTo(cx-30,leftY-5,cx-28,leftY);ctx.stroke();
+      const leftY=cy+45+phase*20;
+      const rightY=cy+45-phase*20;
+      // Left arm (longer)
+      ctx.strokeStyle=shirtColor;ctx.lineWidth=7;
+      ctx.beginPath();ctx.moveTo(cx-20,cy+55);ctx.quadraticCurveTo(cx-36,leftY-8,cx-34,leftY);ctx.stroke();
       ctx.fillStyle=skin;
-      ctx.beginPath();ctx.ellipse(cx-28,leftY,5,3,phase*0.3,0,Math.PI*2);ctx.fill();
-      // Right arm
-      ctx.strokeStyle=shirtColor;ctx.lineWidth=6;
-      ctx.beginPath();ctx.moveTo(cx+20,cy+55);ctx.quadraticCurveTo(cx+30,rightY-5,cx+28,rightY);ctx.stroke();
+      ctx.beginPath();ctx.ellipse(cx-34,leftY,7,4,phase*0.3,0,Math.PI*2);ctx.fill();
+      // Right arm (longer)
+      ctx.strokeStyle=shirtColor;ctx.lineWidth=7;
+      ctx.beginPath();ctx.moveTo(cx+20,cy+55);ctx.quadraticCurveTo(cx+36,rightY-8,cx+34,rightY);ctx.stroke();
       ctx.fillStyle=skin;
-      ctx.beginPath();ctx.ellipse(cx+28,rightY,5,3,-phase*0.3,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.ellipse(cx+34,rightY,7,4,-phase*0.3,0,Math.PI*2);ctx.fill();
     }
   }
 }
@@ -1572,10 +1603,10 @@ function buildSkyMessage(who){
     skid.position.set(x,-0.9,0); heli.add(skid);
   });
   heli.position.set(15,0,0); g.add(heli);
-  // Tow rope
-  const rope=new THREE.Mesh(new THREE.CylinderGeometry(0.02,0.02,5,4),
+  // Tow rope (straight vertical line down from helicopter)
+  const rope=new THREE.Mesh(new THREE.CylinderGeometry(0.03,0.03,3,4),
     new THREE.MeshPhongMaterial({color:0x888888}));
-  rope.position.set(3,-2.5,0);rope.rotation.z=0.4; g.add(rope);
+  rope.position.set(15,-1.5,0); g.add(rope);
   // Banner
   const cnv=document.createElement("canvas");cnv.width=1024;cnv.height=192;
   const ctx=cnv.getContext("2d");
